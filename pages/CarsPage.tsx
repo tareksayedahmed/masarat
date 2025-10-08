@@ -1,0 +1,107 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Car, Branch, FullCarDetails } from '../types';
+import { CARS, BRANCHES, CAR_MODELS } from '../constants';
+import CarCard from '../components/booking/CarCard';
+import Modal from '../components/ui/Modal';
+import BookingForm from '../components/booking/BookingForm';
+import Select from '../components/ui/Select';
+import { useAuth } from '../context/AuthContext';
+
+const CarsPage: React.FC = () => {
+  const { branchId } = useParams<{ branchId: string }>();
+  const [branch, setBranch] = useState<Branch | null>(null);
+  const [selectedCar, setSelectedCar] = useState<FullCarDetails | null>(null);
+  const [isBookingModalOpen, setBookingModalOpen] = useState(false);
+  const [isConfirmationOpen, setConfirmationOpen] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const { user } = useAuth();
+  
+  const carModelsMap = useMemo(() => new Map(CAR_MODELS.map(m => [m.key, m])), []);
+
+  const branchCars: FullCarDetails[] = useMemo(() => {
+    const physicalCarsInBranch = CARS.filter(c => c.branchId === branchId);
+    return physicalCarsInBranch.map(car => {
+        const model = carModelsMap.get(car.modelKey);
+        if (!model) return null; // Should not happen with consistent data
+        return {
+            ...car,
+            make: model.make,
+            model: model.model,
+            year: model.year,
+            category: model.category,
+            daily_price: model.daily_price,
+            weekly_price: model.weekly_price,
+            monthly_price: model.monthly_price,
+            images: model.images,
+        };
+    }).filter((c): c is FullCarDetails => c !== null);
+  }, [branchId, carModelsMap]);
+
+
+  useEffect(() => {
+    const currentBranch = BRANCHES.find(b => b.id === branchId) || null;
+    setBranch(currentBranch);
+  }, [branchId]);
+
+  const handleBook = (car: FullCarDetails) => {
+    setSelectedCar(car);
+    setBookingModalOpen(true);
+  };
+  
+  const handleConfirmBooking = () => {
+    setBookingModalOpen(false);
+    setConfirmationOpen(true);
+  }
+  
+  const filteredCars = branchCars.filter(car => filter === 'all' || car.category === filter);
+
+  if (!branch) {
+    return <div>الفرع غير موجود.</div>;
+  }
+
+  return (
+    <div>
+      <Link to="/branches" className="inline-flex items-center text-orange-600 hover:text-orange-800 mb-4 group transition-colors duration-200">
+        <span>العودة لاختيار فرع آخر</span>
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ms-2 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </Link>
+      <h1 className="text-4xl font-extrabold mb-2">السيارات المتاحة في فرع {branch.name}</h1>
+      <p className="text-lg text-gray-500 mb-8">تصفح أسطولنا واختر ما يناسبك.</p>
+      
+      <div className="mb-6 max-w-xs">
+        <Select id="categoryFilter" label="تصفية حسب الفئة" value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">الكل</option>
+            <option value="سيدان">سيدان</option>
+            <option value="SUV">SUV</option>
+            <option value="اقتصادية">اقتصادية</option>
+            <option value="شاحنة">شاحنة</option>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredCars.map(car => (
+          <CarCard key={car.id} car={car} onBook={handleBook} />
+        ))}
+        {filteredCars.length === 0 && <p>لا توجد سيارات مطابقة لمعايير البحث.</p>}
+      </div>
+
+      {selectedCar && (
+        <Modal isOpen={isBookingModalOpen} onClose={() => setBookingModalOpen(false)} title={user ? `حجز ${selectedCar.make} ${selectedCar.model}` : "تسجيل الدخول للمتابعة"}>
+          <BookingForm car={selectedCar} onClose={() => setBookingModalOpen(false)} onConfirm={handleConfirmBooking} />
+        </Modal>
+      )}
+
+       <Modal isOpen={isConfirmationOpen} onClose={() => setConfirmationOpen(false)} title="تم استلام طلبك">
+          <div className="text-center">
+            <p className="text-lg">شكراً لك! تم إرسال طلب الحجز بنجاح.</p>
+            <p className="text-gray-600 mt-2">سيتم التواصل معك للتأكيد. يمكنك متابعة حالة الحجز من صفحتك الشخصية.</p>
+          </div>
+        </Modal>
+    </div>
+  );
+};
+
+export default CarsPage;
