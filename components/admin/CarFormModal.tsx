@@ -76,7 +76,7 @@ const CarFormModal: React.FC<CarFormModalProps> = ({ isOpen, onClose, onSave, ca
                  {user?.role === 'HeadAdmin' && (
                      <Select label="الفرع" name="branchId" value={formData.branchId} onChange={handleChange} required>
                         <option value="">اختر فرع</option>
-                        {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        {BRANCHES.filter(b => b.id !== 'e-branch').map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                      </Select>
                 )}
                  <Select label="الحالة التشغيلية" name="status" value={formData.status} onChange={handleChange}>

@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../ui/Logo';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { UserRole } from '../../types';
+import { UserRole, Branch } from '../../types';
 import AuthForm from '../auth/AuthForm';
 import { BRANCHES } from '../../constants';
 
@@ -18,13 +17,18 @@ const Header: React.FC = () => {
 
   // Group branches by region for the dropdown
   const branchesByRegion = useMemo(() => {
-    return BRANCHES.reduce((acc, branch) => {
-      if (!acc[branch.region]) {
-        acc[branch.region] = [];
+    // FIX: Explicitly typed the accumulator in the `reduce` function to correctly
+    // type `branchesByRegion`. This resolves an issue where TypeScript could not infer
+    // the type of the `branches` variable within the subsequent `.map()` call,
+    // causing a compilation error.
+    return BRANCHES.reduce((acc: Record<string, Branch[]>, branch) => {
+      const region = branch.region;
+      if (!acc[region]) {
+        acc[region] = [];
       }
-      acc[branch.region].push(branch);
+      acc[region].push(branch);
       return acc;
-    }, {} as Record<string, typeof BRANCHES>);
+    }, {});
   }, []);
 
   // Close dropdown when clicking outside
@@ -53,13 +57,13 @@ const Header: React.FC = () => {
   
   const NavLinks = () => (
     <>
-      <Link to="/" onClick={closeAllMenus} className="px-4 py-2 text-gray-600 hover:text-orange-600 transition-colors">الرئيسية</Link>
+      <Link to="/" onClick={closeAllMenus} className="px-4 py-2 text-gray-300 hover:text-orange-500 transition-colors">الرئيسية</Link>
       
       {/* Branches Dropdown */}
       <div className="relative" ref={branchesMenuRef}>
         <button 
           onClick={() => setBranchesMenuOpen(!isBranchesMenuOpen)}
-          className="px-4 py-2 flex items-center text-gray-600 hover:text-orange-600 transition-colors"
+          className="px-4 py-2 flex items-center text-gray-300 hover:text-orange-500 transition-colors"
         >
           سيارات الفروع
           <svg className={`w-4 h-4 ms-1 transition-transform ${isBranchesMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -84,8 +88,8 @@ const Header: React.FC = () => {
         )}
       </div>
       
-      <Link to="/about" onClick={closeAllMenus} className="px-4 py-2 text-gray-600 hover:text-orange-600 transition-colors">عن الشركة</Link>
-      <Link to="/contact" onClick={closeAllMenus} className="px-4 py-2 text-gray-600 hover:text-orange-600 transition-colors">اتصل بنا</Link>
+      <Link to="/about" onClick={closeAllMenus} className="px-4 py-2 text-gray-300 hover:text-orange-500 transition-colors">عن الشركة</Link>
+      <Link to="/contact" onClick={closeAllMenus} className="px-4 py-2 text-gray-300 hover:text-orange-500 transition-colors">اتصل بنا</Link>
     </>
   );
 
@@ -144,17 +148,17 @@ const Header: React.FC = () => {
   );
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+    <header className="bg-gray-800 sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-3 flex justify-between items-center text-white">
         <Link to="/" onClick={closeAllMenus}>
-          <Logo />
+          <Logo isDark={true} />
         </Link>
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center">
           <nav className="flex items-center">
             <NavLinks />
           </nav>
-          <div className="border-s border-gray-200 ms-4 ps-4">
+          <div className="border-s border-gray-700 ms-4 ps-4">
              {user ? (
               <div className="flex items-center space-i-4">
                 <Link to={isAdmin ? "/admin" : "/profile"} onClick={closeAllMenus}>

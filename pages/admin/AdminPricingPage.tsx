@@ -1,14 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CAR_MODELS } from '../../constants';
 import { CarModel } from '../../types';
 import Button from '../../components/ui/Button';
 import CarModelFormModal from '../../components/admin/CarModelFormModal';
 import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import Modal from '../../components/ui/Modal';
 
 const AdminPricingPage: React.FC = () => {
     const [models, setModels] = useState<CarModel[]>(CAR_MODELS);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const [selectedModel, setSelectedModel] = useState<CarModel | null>(null);
+    
+    // Filter states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+
+    const filteredModels = useMemo(() => {
+        return models.filter(model => {
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch = searchLower === '' ||
+                model.make.toLowerCase().includes(searchLower) ||
+                model.model.toLowerCase().includes(searchLower);
+
+            const matchesCategory = categoryFilter === 'all' || model.category === categoryFilter;
+
+            return matchesSearch && matchesCategory;
+        }).sort((a,b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model)); // Sort alphabetically
+    }, [models, searchQuery, categoryFilter]);
 
     const handleOpenModal = (model: CarModel | null = null) => {
         setSelectedModel(model);
@@ -32,6 +52,16 @@ const AdminPricingPage: React.FC = () => {
             )
         );
     };
+    
+    const resetFilters = () => {
+        setSearchQuery('');
+        setCategoryFilter('all');
+    };
+
+    const handleConfirmReset = () => {
+        resetFilters();
+        setIsResetConfirmOpen(false);
+    }
 
     return (
         <div>
@@ -40,6 +70,27 @@ const AdminPricingPage: React.FC = () => {
                 <Button onClick={() => handleOpenModal()}>إضافة طراز جديد</Button>
             </div>
             <p className="text-gray-500 mb-6 -mt-4">الأسعار هنا موحدة وتطبق على جميع السيارات من نفس الطراز في كل الفروع.</p>
+
+            <div className="bg-white p-4 rounded-lg shadow mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="md:col-span-1">
+                         <Input
+                            label="بحث بالصانع أو الموديل"
+                            placeholder="مثال: تويوتا كامري..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <Select label="فلترة حسب الفئة" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                        <option value="all">كل الفئات</option>
+                        <option value="اقتصادية">اقتصادية</option>
+                        <option value="سيدان">سيدان</option>
+                        <option value="SUV">SUV</option>
+                        <option value="شاحنة">شاحنة</option>
+                    </Select>
+                     <Button variant="secondary" onClick={() => setIsResetConfirmOpen(true)}>إعادة تعيين الفلاتر</Button>
+                </div>
+            </div>
 
             {/* Desktop Table */}
             <div className="bg-white rounded-lg shadow overflow-x-auto hidden lg:block">
@@ -54,7 +105,7 @@ const AdminPricingPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y">
-                        {models.map(model => (
+                        {filteredModels.map(model => (
                             <tr key={model.key} className="text-gray-700">
                                 <td className="px-4 py-3">
                                     <div className="flex items-center text-sm">
@@ -81,13 +132,16 @@ const AdminPricingPage: React.FC = () => {
                                 </td>
                             </tr>
                         ))}
+                        {filteredModels.length === 0 && (
+                             <tr><td colSpan={5} className="text-center py-10 text-gray-500">لا توجد طرازات مطابقة للبحث.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
 
             {/* Mobile & Tablet Cards */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
-                {models.map(model => (
+                {filteredModels.map(model => (
                     <div key={model.key} className="bg-white p-4 rounded-lg shadow">
                          <div className="flex justify-between items-start">
                              <div>
@@ -106,6 +160,7 @@ const AdminPricingPage: React.FC = () => {
                          </div>
                     </div>
                 ))}
+                 {filteredModels.length === 0 && <p className="text-center text-gray-500 md:col-span-2">لا توجد طرازات مطابقة للبحث.</p>}
             </div>
 
             <CarModelFormModal
@@ -114,6 +169,18 @@ const AdminPricingPage: React.FC = () => {
                 onSave={handleSaveModel}
                 model={selectedModel}
             />
+
+            <Modal
+                isOpen={isResetConfirmOpen}
+                onClose={() => setIsResetConfirmOpen(false)}
+                title="تأكيد إعادة التعيين"
+            >
+                <p>هل أنت متأكد أنك تريد إعادة تعيين جميع الفلاتر؟</p>
+                <div className="flex justify-end space-i-2 pt-4 mt-4 border-t">
+                    <Button variant="secondary" onClick={() => setIsResetConfirmOpen(false)}>إلغاء</Button>
+                    <Button variant="danger" onClick={handleConfirmReset}>نعم، أعد التعيين</Button>
+                </div>
+            </Modal>
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import { Branch, Car, User, UserRole, Booking, AuditLog, CarModel } from './types';
 
 export const BRANCHES: Branch[] = [
+  { id: 'e-branch', name: 'الفرع الالكتروني', region: 'عبر الإنترنت', workingHours: '24 ساعة', phone: '920000000' },
   // الرياض
   { id: 'ryd-yarmuk', name: 'اليرموك', region: 'الرياض', workingHours: '09:00 ص - 11:00 م', phone: '920012345', lat: 24.8118, lng: 46.7801 },
   { id: 'ryd-masif', name: 'المصيف', region: 'الرياض', workingHours: '09:00 ص - 11:00 م', phone: '920012346', lat: 24.7656, lng: 46.6631 },
@@ -28,34 +29,34 @@ export const BRANCHES: Branch[] = [
 ];
 
 export const CAR_MODELS: CarModel[] = [
-  { "key": "toyota-raize-2023", "make": "تويوتا", "model": "رايز", "year": 2023, "category": "SUV", "daily_price": 412, "weekly_price": 2680, "monthly_price": 10300, "images": [ "https://i.ibb.co/L5hH82Z/toyota-raize.jpg" ] },
-  { "key": "toyota-rush-2023", "make": "تويوتا", "model": "رش واجن", "year": 2023, "category": "SUV", "daily_price": 491, "weekly_price": 3190, "monthly_price": 12300, "images": [ "https://i.ibb.co/h7gJj4g/toyota-rush.jpg" ] },
-  { "key": "changan-eado-plus-2023", "make": "شانجان", "model": "ايدو بلس", "year": 2023, "category": "سيدان", "daily_price": 235, "weekly_price": 1530, "monthly_price": 5900, "images": [ "https://i.ibb.co/6PqjQ4s/changan-eado-plus.jpg" ] },
-  { "key": "toyota-yaris-2023", "make": "تويوتا", "model": "يارس", "year": 2023, "category": "اقتصادية", "daily_price": 142, "weekly_price": 920, "monthly_price": 3550, "images": [ "https://i.ibb.co/422jG0q/toyota-yaris.jpg" ] },
-  { "key": "isuzu-dmax-2022", "make": "ايسوزو", "model": "ديماكس", "year": 2022, "category": "شاحنة", "daily_price": 349, "weekly_price": 2270, "monthly_price": 8750, "images": [ "https://i.ibb.co/sKq0g6x/isuzu-dmax.jpg" ] },
-  { "key": "changan-uni-v-2025", "make": "شانجان", "model": "يوني في", "year": 2025, "category": "سيدان", "daily_price": 277, "weekly_price": 1800, "monthly_price": 6950, "images": [ "https://i.ibb.co/yQvT6g6/changan-uni-v.jpg" ] },
-  { "key": "toyota-veloz-2023", "make": "تويوتا", "model": "فيلوز", "year": 2023, "category": "SUV", "daily_price": 435, "weekly_price": 2830, "monthly_price": 10900, "images": [ "https://i.ibb.co/nMSfVvC/toyota-veloz.jpg" ] },
-  { "key": "changan-alsvin-2023", "make": "شانجان", "model": "السفن", "year": 2023, "category": "اقتصادية", "daily_price": 139, "weekly_price": 900, "monthly_price": 3500, "images": [ "https://i.ibb.co/Yh4Q9w1/changan-alsvin.jpg" ] },
-  { "key": "chevrolet-tahoe-2023", "make": "شيفورلية", "model": "تاهو", "year": 2023, "category": "SUV", "daily_price": 501, "weekly_price": 3260, "monthly_price": 12550, "images": [ "https://i.ibb.co/vYcZg6C/chevrolet-tahoe.jpg" ] },
-  { "key": "changan-alsvin-2024", "make": "شانجان", "model": "السفن", "year": 2024, "category": "اقتصادية", "daily_price": 145, "weekly_price": 940, "monthly_price": 3600, "images": [ "https://i.ibb.co/Yh4Q9w1/changan-alsvin.jpg" ] },
-  { "key": "geely-emgrand-2026", "make": "جيلي", "model": "EMGRAND", "year": 2026, "category": "سيدان", "daily_price": 273, "weekly_price": 1770, "monthly_price": 6850, "images": [ "https://i.ibb.co/8b7J7g0/geely-emgrand.jpg" ] },
-  { "key": "geely-gx3pro-2025", "make": "جيلي", "model": "GX3PRO", "year": 2025, "category": "SUV", "daily_price": 546, "weekly_price": 3550, "monthly_price": 13650, "images": [ "https://i.ibb.co/JCdPZS1/geely-gx3pro.jpg" ] },
-  { "key": "geely-okavango-2025", "make": "جيلي", "model": "اوكافنجو", "year": 2025, "category": "SUV", "daily_price": 511, "weekly_price": 3320, "monthly_price": 12800, "images": [ "https://i.ibb.co/bF9c11X/geely-okavango.jpg" ] },
-  { "key": "geely-gx3pro-2026", "make": "جيلي", "model": "GX3PRO", "year": 2026, "category": "SUV", "daily_price": 393, "weekly_price": 2550, "monthly_price": 9850, "images": [ "https://i.ibb.co/JCdPZS1/geely-gx3pro.jpg" ] },
-  { "key": "hyundai-i10-2025", "make": "هيونداي", "model": "i 10", "year": 2025, "category": "اقتصادية", "daily_price": 142, "weekly_price": 920, "monthly_price": 3550, "images": [ "https://i.ibb.co/Q8QjX3S/hyundai-i10.jpg" ] },
-  { "key": "changan-uni-t-2023", "make": "شانجان", "model": "يوني تي", "year": 2023, "category": "SUV", "daily_price": 361, "weekly_price": 2350, "monthly_price": 9050, "images": [ "https://i.ibb.co/Qk0kG4C/changan-uni-t.jpg" ] },
-  { "key": "hyundai-azera-2025", "make": "هيونداي", "model": "AZERA", "year": 2025, "category": "سيدان", "daily_price": 295, "weekly_price": 1920, "monthly_price": 7400, "images": [ "https://i.ibb.co/8Yj0LzT/hyundai-azera.jpg" ] },
-  { "key": "geely-preface-2026", "make": "جيلي", "model": "PREFACE", "year": 2026, "category": "سيدان", "daily_price": 254, "weekly_price": 1650, "monthly_price": 6350, "images": [ "https://i.ibb.co/z572TfK/geely-preface.jpg" ] },
-  { "key": "ford-taurus-2025", "make": "فورد", "model": "تورس", "year": 2025, "category": "سيدان", "daily_price": 269, "weekly_price": 1750, "monthly_price": 6750, "images": [ "https://i.ibb.co/2N3S0hG/ford-taurus.jpg" ] },
-  { "key": "toyota-camry-2025", "make": "تويوتا", "model": "كامري", "year": 2025, "category": "سيدان", "daily_price": 220, "weekly_price": 1430, "monthly_price": 5500, "images": [ "https://i.ibb.co/3zdv7Jj/toyota-camry.jpg" ] },
-  { "key": "changan-uni-k-2025", "make": "شانجان", "model": "يوني كي", "year": 2025, "category": "SUV", "daily_price": 535, "weekly_price": 3480, "monthly_price": 13400, "images": [ "https://i.ibb.co/pwnG3tP/changan-uni-k.jpg" ] },
-  { "key": "changan-cs35-2023", "make": "شانجان", "model": "CS 35", "year": 2023, "category": "SUV", "daily_price": 381, "weekly_price": 2480, "monthly_price": 9550, "images": [ "https://i.ibb.co/tZ5Gj4m/changan-cs35.jpg" ] },
-  { "key": "changan-uni-v-2024", "make": "شانجان", "model": "يوني في", "year": 2024, "category": "سيدان", "daily_price": 269, "weekly_price": 1750, "monthly_price": 6750, "images": [ "https://i.ibb.co/yQvT6g6/changan-uni-v.jpg" ] },
-  { "key": "nissan-sunny-2022", "make": "نيسان", "model": "صني", "year": 2022, "category": "اقتصادية", "daily_price": 158, "weekly_price": 1030, "monthly_price": 3950, "images": [ "https://i.ibb.co/v4bVfN1/nissan-sunny.jpg" ] },
-  { "key": "toyota-yaris-2022", "make": "تويوتا", "model": "يارس", "year": 2022, "category": "اقتصادية", "daily_price": 139, "weekly_price": 900, "monthly_price": 3500, "images": [ "https://i.ibb.co/422jG0q/toyota-yaris.jpg" ] },
-  { "key": "nissan-sunny-2020", "make": "نيسان", "model": "صني", "year": 2020, "category": "اقتصادية", "daily_price": 141, "weekly_price": 920, "monthly_price": 3550, "images": [ "https://i.ibb.co/v4bVfN1/nissan-sunny.jpg" ] },
-  { "key": "changan-hunter-2023", "make": "شانجان", "model": "هنتر بكب غمارتين", "year": 2023, "category": "شاحنة", "daily_price": 349, "weekly_price": 2270, "monthly_price": 8750, "images": [ "https://i.ibb.co/fnyxNnL/changan-hunter.jpg" ] },
-  { "key": "changan-uni-k-2023", "make": "شانجان", "model": "يوني كي", "year": 2023, "category": "SUV", "daily_price": 465, "weekly_price": 3020, "monthly_price": 11650, "images": [ "https://i.ibb.co/pwnG3tP/changan-uni-k.jpg" ] }
+  { "key": "toyota-raize-2023", "make": "تويوتا", "model": "رايز", "year": 2023, "category": "SUV", "daily_price": 412, "weekly_price": 2680, "monthly_price": 10300, "images": ["https://i.postimg.cc/q737V4Q2/toyota-raize.jpg"] },
+  { "key": "toyota-rush-2023", "make": "تويوتا", "model": "رش واجن", "year": 2023, "category": "SUV", "daily_price": 491, "weekly_price": 3190, "monthly_price": 12300, "images": ["https://i.postimg.cc/L6jZqkM8/toyota-rush.jpg"] },
+  { "key": "changan-eado-plus-2023", "make": "شانجان", "model": "ايدو بلس", "year": 2023, "category": "سيدان", "daily_price": 235, "weekly_price": 1530, "monthly_price": 5900, "images": ["https://i.postimg.cc/mD8z7WzG/changan-eado-plus.jpg"] },
+  { "key": "toyota-yaris-2023", "make": "تويوتا", "model": "يارس", "year": 2023, "category": "اقتصادية", "daily_price": 142, "weekly_price": 920, "monthly_price": 3550, "images": ["https://i.postimg.cc/hG4w2yS3/toyota-yaris.jpg"] },
+  { "key": "isuzu-dmax-2022", "make": "ايسوزو", "model": "ديماكس", "year": 2022, "category": "شاحنة", "daily_price": 349, "weekly_price": 2270, "monthly_price": 8750, "images": ["https://i.postimg.cc/W3dD29B5/isuzu-dmax.jpg"] },
+  { "key": "changan-uni-v-2025", "make": "شانجان", "model": "يوني في", "year": 2025, "category": "سيدان", "daily_price": 277, "weekly_price": 1800, "monthly_price": 6950, "images": ["https://i.postimg.cc/GtCKMh6M/changan-uni-v.jpg"] },
+  { "key": "toyota-veloz-2023", "make": "تويوتا", "model": "فيلوز", "year": 2023, "category": "SUV", "daily_price": 435, "weekly_price": 2830, "monthly_price": 10900, "images": ["https://i.postimg.cc/MHZQCk8B/toyota-veloz.jpg"] },
+  { "key": "changan-alsvin-2023", "make": "شانجان", "model": "السفن", "year": 2023, "category": "اقتصادية", "daily_price": 139, "weekly_price": 900, "monthly_price": 3500, "images": ["https://i.postimg.cc/Wp0y1xR2/changan-alsvin.jpg"] },
+  { "key": "chevrolet-tahoe-2023", "make": "شيفورلية", "model": "تاهو", "year": 2023, "category": "SUV", "daily_price": 501, "weekly_price": 3260, "monthly_price": 12550, "images": ["https://i.postimg.cc/7Z0tqLzF/chevrolet-tahoe.jpg"] },
+  { "key": "changan-alsvin-2024", "make": "شانجان", "model": "السفن", "year": 2024, "category": "اقتصادية", "daily_price": 145, "weekly_price": 940, "monthly_price": 3600, "images": ["https://i.postimg.cc/Wp0y1xR2/changan-alsvin.jpg"] },
+  { "key": "geely-emgrand-2026", "make": "جيلي", "model": "EMGRAND", "year": 2026, "category": "سيدان", "daily_price": 273, "weekly_price": 1770, "monthly_price": 6850, "images": ["https://i.postimg.cc/pT3Y94b2/geely-emgrand.jpg"] },
+  { "key": "geely-gx3pro-2025", "make": "جيلي", "model": "GX3PRO", "year": 2025, "category": "SUV", "daily_price": 546, "weekly_price": 3550, "monthly_price": 13650, "images": ["https://i.postimg.cc/3Jd0kS3x/geely-gx3pro.jpg"] },
+  { "key": "geely-okavango-2025", "make": "جيلي", "model": "اوكافنجو", "year": 2025, "category": "SUV", "daily_price": 511, "weekly_price": 3320, "monthly_price": 12800, "images": ["https://i.postimg.cc/k47jC3h3/geely-okavango.jpg"] },
+  { "key": "geely-gx3pro-2026", "make": "جيلي", "model": "GX3PRO", "year": 2026, "category": "SUV", "daily_price": 393, "weekly_price": 2550, "monthly_price": 9850, "images": ["https://i.postimg.cc/3Jd0kS3x/geely-gx3pro.jpg"] },
+  { "key": "hyundai-i10-2025", "make": "هيونداي", "model": "i 10", "year": 2025, "category": "اقتصادية", "daily_price": 142, "weekly_price": 920, "monthly_price": 3550, "images": ["https://i.postimg.cc/cLYxS1mp/hyundai-i10.jpg"] },
+  { "key": "changan-uni-t-2023", "make": "شانجان", "model": "يوني تي", "year": 2023, "category": "SUV", "daily_price": 361, "weekly_price": 2350, "monthly_price": 9050, "images": ["https://i.postimg.cc/prgBLpYx/changan-uni-t.jpg"] },
+  { "key": "hyundai-azera-2025", "make": "هيونداي", "model": "AZERA", "year": 2025, "category": "سيدان", "daily_price": 295, "weekly_price": 1920, "monthly_price": 7400, "images": ["https://i.postimg.cc/L8yS47s3/hyundai-azera.jpg"] },
+  { "key": "geely-preface-2026", "make": "جيلي", "model": "PREFACE", "year": 2026, "category": "سيدان", "daily_price": 254, "weekly_price": 1650, "monthly_price": 6350, "images": ["https://i.postimg.cc/ydpG1G7z/geely-preface.jpg"] },
+  { "key": "ford-taurus-2025", "make": "فورد", "model": "تورس", "year": 2025, "category": "سيدان", "daily_price": 269, "weekly_price": 1750, "monthly_price": 6750, "images": ["https://i.postimg.cc/J0B7y4T6/ford-taurus.jpg"] },
+  { "key": "toyota-camry-2025", "make": "تويوتا", "model": "كامري", "year": 2025, "category": "سيدان", "daily_price": 220, "weekly_price": 1430, "monthly_price": 5500, "images": ["https://i.postimg.cc/d1hKk4B7/toyota-camry.jpg"] },
+  { "key": "changan-uni-k-2025", "make": "شانجان", "model": "يوني كي", "year": 2025, "category": "SUV", "daily_price": 535, "weekly_price": 3480, "monthly_price": 13400, "images": ["https://i.postimg.cc/WbYd2c9L/changan-uni-k.jpg"] },
+  { "key": "changan-cs35-2023", "make": "شانجان", "model": "CS 35", "year": 2023, "category": "SUV", "daily_price": 381, "weekly_price": 2480, "monthly_price": 9550, "images": ["https://i.postimg.cc/13kxtqVv/changan-cs35.jpg"] },
+  { "key": "changan-uni-v-2024", "make": "شانجان", "model": "يوني في", "year": 2024, "category": "سيدان", "daily_price": 269, "weekly_price": 1750, "monthly_price": 6750, "images": ["https://i.postimg.cc/GtCKMh6M/changan-uni-v.jpg"] },
+  { "key": "nissan-sunny-2022", "make": "نيسان", "model": "صني", "year": 2022, "category": "اقتصادية", "daily_price": 158, "weekly_price": 1030, "monthly_price": 3950, "images": ["https://i.postimg.cc/d0DkX0zL/nissan-sunny.jpg"] },
+  { "key": "toyota-yaris-2022", "make": "تويوتا", "model": "يارس", "year": 2022, "category": "اقتصادية", "daily_price": 139, "weekly_price": 900, "monthly_price": 3500, "images": ["https://i.postimg.cc/hG4w2yS3/toyota-yaris.jpg"] },
+  { "key": "nissan-sunny-2020", "make": "نيسان", "model": "صني", "year": 2020, "category": "اقتصادية", "daily_price": 141, "weekly_price": 920, "monthly_price": 3550, "images": ["https://i.postimg.cc/d0DkX0zL/nissan-sunny.jpg"] },
+  { "key": "changan-hunter-2023", "make": "شانجان", "model": "هنتر بكب غمارتين", "year": 2023, "category": "شاحنة", "daily_price": 349, "weekly_price": 2270, "monthly_price": 8750, "images": ["https://i.postimg.cc/L5KZyQYd/changan-hunter.jpg"] },
+  { "key": "changan-uni-k-2023", "make": "شانجان", "model": "يوني كي", "year": 2023, "category": "SUV", "daily_price": 465, "weekly_price": 3020, "monthly_price": 11650, "images": ["https://i.postimg.cc/WbYd2c9L/changan-uni-k.jpg"] }
 ];
 
 export const CARS: Car[] = [
@@ -98,11 +99,11 @@ export const USERS: User[] = [
 ];
 
 // This is a placeholder and will be replaced by a real booking system
-export const BOOKINGS: Omit<Booking, 'documents' | 'contact'>[] = [
-    { id: 'booking-01', carId: 'car-021', userId: 'user-customer', branchId: 'north-arar', startDate: '2024-08-10T10:00:00', endDate: '2024-08-15T10:00:00', days: 5, options: { insurance: true, extra_driver: false, open_km: true, child_seat: false, internationalPermit: false }, priceBreakdown: { base: 2505, insurance: 250, extras: 100, tax: 428, total: 3283 }, status: 'active' },
-    { id: 'booking-02', carId: 'car-013', userId: 'user-customer', branchId: 'ryd-airport-t1', startDate: '2024-09-01T14:30:00', endDate: '2024-09-03T14:30:00', days: 2, options: { insurance: true, extra_driver: true, open_km: false, child_seat: true, internationalPermit: false }, priceBreakdown: { base: 284, insurance: 100, extras: 80, tax: 70, total: 534 }, status: 'pending' },
-    { id: 'booking-03', carId: 'car-032', userId: 'user-customer', branchId: 'ryd-airport-t1', startDate: '2024-07-20T12:00:00', endDate: '2024-07-27T12:00:00', days: 7, options: { insurance: false, extra_driver: false, open_km: false, child_seat: false, internationalPermit: true }, priceBreakdown: { base: 3822, insurance: 0, extras: 0, tax: 573, total: 4395 }, status: 'completed' },
-    { id: 'booking-04', carId: 'car-012', userId: 'user-customer', branchId: 'ryd-ulaya', startDate: '2024-09-05T09:00:00', endDate: '2024-09-10T09:00:00', days: 5, options: { insurance: true, extra_driver: false, open_km: false, child_seat: false, internationalPermit: false }, priceBreakdown: { base: 1390, insurance: 250, extras: 0, tax: 246, total: 1886 }, status: 'cancelled', notes: 'سبب الإلغاء: لم يتم رفع الوثائق المطلوبة في الوقت المحدد.' },
+export const BOOKINGS: Booking[] = [
+    { id: 'booking-01', bookingNumber: 'MAS-1001', carId: 'car-021', userId: 'user-customer', branchId: 'north-arar', startDate: '2024-08-10T10:00:00', endDate: '2024-08-15T10:00:00', days: 5, options: { insurance: true, extra_driver: false, open_km: true, child_seat: false, internationalPermit: false }, priceBreakdown: { base: 2505, insurance: 250, extras: 100, delivery: 30, tax: 433, total: 3318 }, status: 'active', documents: { license: null, licenseExpiry: '2028-05-10', id_card: null }, contact: { phone1: '0501234567', address: 'حي الملز، الرياض' }, deliveryOption: 'delivery_pickup', deliveryLocation: { address: 'الموقع المحدد على الخريطة', lat: 30.9990, lng: 41.0390 } },
+    { id: 'booking-02', bookingNumber: 'MAS-1002', carId: 'car-013', userId: 'user-customer', branchId: 'ryd-airport-t1', startDate: '2024-09-01T14:30:00', endDate: '2024-09-03T14:30:00', days: 2, options: { insurance: true, extra_driver: true, open_km: false, child_seat: true, internationalPermit: false }, priceBreakdown: { base: 284, insurance: 100, extras: 80, delivery: 0, tax: 70, total: 534 }, status: 'pending', documents: { license: null, licenseExpiry: '2027-11-20', id_card: null }, contact: { phone1: '0501234567', address: 'حي الملز، الرياض' }, deliveryOption: 'branch' },
+    { id: 'booking-03', bookingNumber: 'MAS-1003', carId: 'car-032', userId: 'user-customer', branchId: 'ryd-airport-t1', startDate: '2024-07-20T12:00:00', endDate: '2024-07-27T12:00:00', days: 7, options: { insurance: false, extra_driver: false, open_km: false, child_seat: false, internationalPermit: true }, priceBreakdown: { base: 3822, insurance: 0, extras: 0, delivery: 20, tax: 576, total: 4418 }, status: 'completed', documents: { license: null, licenseExpiry: '2029-01-15', id_card: null }, contact: { phone1: '0501234567', address: 'حي الملز، الرياض' }, deliveryOption: 'delivery', deliveryLocation: { address: 'الموقع المحدد على الخريطة', lat: 24.7656, lng: 46.6631 } },
+    { id: 'booking-04', bookingNumber: 'MAS-1004', carId: 'car-012', userId: 'user-customer', branchId: 'ryd-ulaya', startDate: '2024-09-05T09:00:00', endDate: '2024-09-10T09:00:00', days: 5, options: { insurance: true, extra_driver: false, open_km: false, child_seat: false, internationalPermit: false }, priceBreakdown: { base: 1390, insurance: 250, extras: 0, delivery: 0, tax: 246, total: 1886 }, status: 'cancelled', notes: 'سبب الإلغاء: لم يتم رفع الوثائق المطلوبة في الوقت المحدد.', documents: { license: null, licenseExpiry: '2026-08-01', id_card: null }, contact: { phone1: '0555667788', address: 'حي العليا، الرياض' }, deliveryOption: 'branch' },
 ];
 
 export const AUDIT_LOGS: AuditLog[] = [
@@ -110,4 +111,10 @@ export const AUDIT_LOGS: AuditLog[] = [
     { id: 'log-02', user: 'branch@masarat.com', action: 'إلغاء تفعيل سيارة', details: 'إلغاء تفعيل فورد إكسبلورر للصيانة', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
     { id: 'log-03', user: 'head@masarat.com', action: 'تطبيق خصم', details: 'تطبيق خصم 10% على فئة سيارات SUV', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
     { id: 'log-04', user: 'branch@masarat.com', action: 'تأكيد حجز', details: 'تأكيد حجز #booking-02', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+];
+
+export const E_BRANCH_VISIBLE_REGIONS: string[] = [
+  'الرياض',
+  'المنطقة الشرقية',
+  'المنطقة الشمالية',
 ];

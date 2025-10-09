@@ -18,6 +18,13 @@ const PriceTagIcon = () => (
   </svg>
 );
 
+const TruckIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h1.382a1 1 0 01.942.658l.496 1.487 2.21-2.947A1 1 0 019.13 3h4.37a1 1 0 01.942.658l.496 1.487 1.108-1.107A1 1 0 0117 4.707V12.5a1 1 0 01-1 1h-2.13a1 1 0 01-.942-.658l-.496-1.487-2.21 2.947a1 1 0 01-.788.341H5a1 1 0 01-1-1V4zm2 1v6.5h2.93a1 1 0 01.942.658l.496 1.487 2.21-2.947A1 1 0 0112.13 11H14V5H9.87a1 1 0 01-.942-.658L8.432 2.853 6.222 5.799A1 1 0 015.432 6H5z" clipRule="evenodd" />
+    </svg>
+);
+
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -30,8 +37,7 @@ const ProfilePage: React.FC = () => {
     return <p>الرجاء تسجيل الدخول لعرض صفحتك الشخصية.</p>;
   }
   
-  // casting because mock data is simplified
-  const userBookings = (BOOKINGS as unknown as Booking[]).filter(b => b.userId === user.id || b.userId === 'user-customer'); // demo purposes
+  const userBookings = BOOKINGS.filter(b => b.userId === user.id || b.userId === 'user-customer'); // demo purposes
 
   const getFullCarDetails = (carId: string): FullCarDetails | null => {
     const car = carsMap.get(carId);
@@ -122,12 +128,18 @@ const ProfilePage: React.FC = () => {
               {userBookings.length > 0 ? userBookings.map(booking => {
                 const car = getFullCarDetails(booking.carId);
                 const branch = BRANCHES.find(b => b.id === booking.branchId);
+                const deliveryText = {
+                    branch: 'استلام من الفرع',
+                    delivery: `توصيل فقط (+${booking.priceBreakdown.delivery} ريال)`,
+                    delivery_pickup: `توصيل واستلام (+${booking.priceBreakdown.delivery} ريال)`
+                }[booking.deliveryOption];
                 return (
                   <Card key={booking.id} className="flex flex-col bg-white overflow-hidden">
                       {car && <img src={car.images[0]} alt={`${car.make} ${car.model}`} className="w-full h-40 object-cover" />}
                       <div className="p-5 flex flex-col flex-grow">
                           <div className="flex justify-between items-start mb-3">
                               <div>
+                                  <p className="text-xs font-semibold text-gray-400 mb-1">#{booking.bookingNumber}</p>
                                   <p className="font-bold text-xl text-gray-800">{car?.make} {car?.model}</p>
                                   <p className="text-sm text-gray-500">{branch?.name}</p>
                               </div>
@@ -143,6 +155,12 @@ const ProfilePage: React.FC = () => {
                                   <CalendarIcon />
                                   <span>إلى <strong>{formatDateTime(booking.endDate)}</strong></span>
                               </div>
+                               {booking.deliveryOption !== 'branch' && (
+                                <div className="flex items-center gap-3">
+                                    <TruckIcon />
+                                    <span>{deliveryText}</span>
+                                </div>
+                               )}
                                <div className="flex items-center gap-3">
                                   <PriceTagIcon />
                                   <span>الإجمالي: <strong className="text-base text-orange-600">{booking.priceBreakdown.total} ريال</strong></span>

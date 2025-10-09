@@ -59,6 +59,17 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({ isOpen, onClo
         priceBreakdown: { ...editedBooking.priceBreakdown, total: newTotal }
     });
   }
+
+  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditedBooking({
+        ...editedBooking,
+        contact: {
+            ...editedBooking.contact,
+            [name]: value
+        }
+    });
+  };
   
   const formatForDateTimeInput = (isoString: string): string => {
     if (!isoString) return '';
@@ -94,13 +105,47 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({ isOpen, onClo
   const handleSave = () => {
     onSave(editedBooking);
   };
+  
+  const deliveryText = {
+    branch: 'استلام وتسليم من الفرع',
+    delivery: 'توصيل السيارة فقط',
+    delivery_pickup: 'توصيل واستلام السيارة'
+  }[booking.deliveryOption];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`تفاصيل الحجز #${booking.id.slice(-4)}`}>
-        <div className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title={`تفاصيل الحجز #${booking.bookingNumber}`}>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
             <div>
                 <h4 className="font-bold">العميل</h4>
                 <p>{customer?.name} ({customer?.email})</p>
+            </div>
+             <div>
+                <h4 className="font-bold">بيانات التواصل</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                    <Input 
+                        label="الجوال الرئيسي" 
+                        type="tel" 
+                        name="phone1"
+                        value={editedBooking.contact.phone1}
+                        onChange={handleContactChange}
+                    />
+                    <Input 
+                        label="جوال إضافي" 
+                        type="tel" 
+                        name="phone2"
+                        value={editedBooking.contact.phone2 || ''}
+                        onChange={handleContactChange}
+                    />
+                </div>
+                <div className="mt-2">
+                    <Input 
+                        label="العنوان" 
+                        type="text" 
+                        name="address"
+                        value={editedBooking.contact.address}
+                        onChange={handleContactChange}
+                    />
+                </div>
             </div>
             <div>
                 <h4 className="font-bold">السيارة</h4>
@@ -134,6 +179,16 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({ isOpen, onClo
                         onChange={handleDateOrDaysChange}
                     />
                 </div>
+            </div>
+            <div>
+                <h4 className="font-bold">التوصيل والاستلام</h4>
+                <p>{deliveryText}</p>
+                {booking.deliveryOption !== 'branch' && (
+                    <div className="text-sm text-gray-600 mt-1">
+                        <p><strong>الموقع:</strong> {booking.deliveryLocation?.address}</p>
+                        <p><strong>رسوم الخدمة:</strong> {booking.priceBreakdown.delivery} ريال</p>
+                    </div>
+                )}
             </div>
              <div>
                 <h4 className="font-bold">خيارات الحجز</h4>

@@ -1,3 +1,5 @@
+
+
 export enum UserRole {
   HeadAdmin = 'HeadAdmin',
   BranchAdmin = 'BranchAdmin',
@@ -61,6 +63,7 @@ export interface FullCarDetails extends Car {
 
 export interface Booking {
   id: string;
+  bookingNumber: string;
   carId: string; // Refers to a physical Car's id
   userId: string;
   branchId: string;
@@ -78,6 +81,7 @@ export interface Booking {
     base: number;
     insurance: number;
     extras: number;
+    delivery: number;
     tax: number;
     total: number;
   };
@@ -93,6 +97,12 @@ export interface Booking {
     address: string;
   };
   notes?: string;
+  deliveryOption: 'branch' | 'delivery' | 'delivery_pickup';
+  deliveryLocation?: {
+      address: string;
+      lat: number;
+      lng: number;
+  };
 }
 
 export interface AuditLog {

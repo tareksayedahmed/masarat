@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import L from 'leaflet';
 import { FullCarDetails } from '../../types';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import { useAuth } from '../../context/AuthContext';
 import AuthForm from '../auth/AuthForm';
+import { BRANCHES } from '../../constants';
 
 interface BookingFormProps {
   car: FullCarDetails;
@@ -26,7 +28,6 @@ const generateTimeOptions = () => {
 
 const getInitialDateTime = () => {
     const now = new Date();
-    // Round up to the next 30 minutes
     now.setMilliseconds(0);
     now.setSeconds(0);
     const minutes = now.getMinutes();
@@ -86,9 +87,20 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
 
   const timeOptions = useMemo(() => generateTimeOptions(), []);
   
+  // Delivery State
+  const [deliveryOption, setDeliveryOption] = useState<'branch' | 'delivery' | 'delivery_pickup'>('branch');
+  const [deliveryLocation, setDeliveryLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [deliveryError, setDeliveryError] = useState('');
+  
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+
   useEffect(() => {
-    // Hide car details during the initial data entry steps to save space on mobile
-    setIsCarDetailsVisible(mainStep >= 4);
+    setIsCarDetailsVisible(mainStep >= 6);
   }, [mainStep]);
 
 
@@ -102,7 +114,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     const startDateTime = new Date(`${startDate}T${startTime}`);
     const endDateTime = new Date(`${endDate}T${endTime}`);
     const now = new Date();
-    now.setMinutes(now.getMinutes() - 1); // Allow booking for the current time slot
+    now.setMinutes(now.getMinutes() - 1); 
 
     if (startDateTime < now) {
         setDateError('وقت الاستلام لا يمكن أن يكون في الماضي.');
@@ -123,32 +135,92 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     setDays(diffDays > 0 ? diffDays : 1);
 
   }, [startDate, startTime, endDate, endTime]);
+  
+  // Map initialization and cleanup
+  useEffect(() => {
+    if (mainStep === 5 && deliveryOption !== 'branch' && mapContainerRef.current && !mapRef.current) {
+        const branch = BRANCHES.find(b => b.id === car.branchId);
+        if (!branch || !branch.lat || !branch.lng) return;
+
+        const map = L.map(mapContainerRef.current).setView([branch.lat, branch.lng], 13);
+        mapRef.current = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        L.marker([branch.lat, branch.lng]).addTo(map).bindPopup(`<b>فرع ${branch.name}</b>`);
+
+        map.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            setDeliveryLocation({ lat, lng });
+            if (markerRef.current) {
+                markerRef.current.setLatLng(e.latlng);
+            } else {
+                markerRef.current = L.marker(e.latlng, { draggable: true }).addTo(map);
+                markerRef.current.on('dragend', (event) => {
+                    const position = event.target.getLatLng();
+                    setDeliveryLocation({ lat: position.lat, lng: position.lng });
+                });
+            }
+        });
+
+        if (deliveryLocation) {
+             markerRef.current = L.marker(deliveryLocation, { draggable: true }).addTo(map);
+             markerRef.current.on('dragend', (event) => {
+                const position = event.target.getLatLng();
+                setDeliveryLocation({ lat: position.lat, lng: position.lng });
+            });
+        }
+    } else if (mapRef.current && (mainStep !== 5 || deliveryOption === 'branch')) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+    }
+  }, [mainStep, deliveryOption, car.branchId]);
+  
+  // Calculate distance and fee
+  useEffect(() => {
+    const branch = BRANCHES.find(b => b.id === car.branchId);
+    if (!deliveryLocation || !branch || !branch.lat || !branch.lng) {
+        setDistance(null);
+        setDeliveryFee(0);
+        setDeliveryError('');
+        return;
+    }
+
+    const branchLatLng = L.latLng(branch.lat, branch.lng);
+    const deliveryLatLng = L.latLng(deliveryLocation.lat, deliveryLocation.lng);
+    const distMeters = branchLatLng.distanceTo(deliveryLatLng);
+    const distKm = distMeters / 1000;
+    setDistance(distKm);
+
+    if (distKm > 40) {
+        setDeliveryError('الموقع المحدد خارج نطاق خدمة التوصيل (40 كم).');
+        setDeliveryFee(0);
+    } else {
+        setDeliveryError('');
+        const feePerTrip = distKm <= 20 ? 15 : distKm <= 30 ? 20 : 25;
+        let totalFee = 0;
+        if (deliveryOption === 'delivery') {
+            totalFee = feePerTrip;
+        } else if (deliveryOption === 'delivery_pickup') {
+            totalFee = feePerTrip * 2;
+        }
+        setDeliveryFee(totalFee);
+    }
+  }, [deliveryLocation, deliveryOption, car.branchId]);
+
 
   const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOptions({ ...options, [e.target.name]: e.target.checked });
   };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newErrors = { ...errors };
-    const fieldName = e.target.name;
-    
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
-
-        if (!allowedTypes.includes(file.type)) {
-            newErrors[fieldName] = "الصيغ المسموح بها هي JPG, PNG, PDF.";
-        } else if (file.size > maxSize) {
-            newErrors[fieldName] = "حجم الملف يجب أن يكون أقل من 5 ميجابايت.";
-        } else {
-            delete newErrors[fieldName];
-            setDocuments({ ...documents, [fieldName]: file });
-        }
-    } else {
-         delete newErrors[fieldName];
+    const { name, files } = e.target;
+    if (files && files.length > 0) {
+      setDocuments({ ...documents, [name]: files[0] });
     }
-     setErrors(newErrors);
   };
   
   const handleDocsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,46 +239,43 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     if (options.child_seat) extrasTotal += 30;
     if (options.internationalPermit) extrasTotal += 100;
     
-    const subtotal = base + extrasTotal;
+    const subtotal = base + extrasTotal + deliveryFee;
     const tax = subtotal * 0.15;
     const total = subtotal + tax;
 
-    return { base, extras: extrasTotal, tax, total };
-  }, [car.daily_price, days, options]);
+    return { base, extras: extrasTotal, delivery: deliveryFee, tax, total };
+  }, [car.daily_price, days, options, deliveryFee]);
 
-  const validateStep1 = () => {
+ const validateStep1 = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!contact.phone1) newErrors.phone1 = "رقم الجوال الرئيسي مطلوب.";
-    if (!contact.address) newErrors.address = "العنوان مطلوب.";
+    if (!contact.phone1.trim()) newErrors.contact = 'رقم الجوال الأساسي مطلوب.';
+    if (!contact.address.trim()) newErrors.contact = 'العنوان مطلوب.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
   
   const validateStep2 = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!documents.license) {
-        newErrors.license = "الرجاء رفع صورة رخصة القيادة.";
-    }
     if (!documents.licenseExpiry) {
-        newErrors.licenseExpiry = "تاريخ انتهاء الرخصة مطلوب.";
-    } else if (new Date(documents.licenseExpiry) < new Date(startDate)) {
-        newErrors.licenseExpiry = "الرخصة ستكون منتهية الصلاحية في تاريخ استلام السيارة.";
+        newErrors.documents = 'تاريخ انتهاء الرخصة مطلوب.';
+    } else if (new Date(documents.licenseExpiry) < new Date()) {
+        newErrors.documents = 'الرخصة منتهية الصلاحية.';
     }
+    if (!documents.license) newErrors.documents = 'الرجاء إرفاق صورة الرخصة.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const validateStep3 = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!documents.id_card) {
-        newErrors.id_card = "الرجاء رفع صورة الهوية / الإقامة.";
-    }
+    if (!documents.id_card) newErrors.id_card = 'الرجاء إرفاق صورة الهوية.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
 
   const handleNext = () => {
+    setErrors({});
     if (mainStep === 1 && !validateStep1()) return;
     if (mainStep === 2 && !validateStep2()) return;
     if (mainStep === 3 && !validateStep3()) return;
@@ -214,7 +283,11 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
         setDateError('الرجاء إدخال تواريخ صحيحة.');
         return;
     }
-    setMainStep(s => Math.min(s + 1, 6));
+    if (mainStep === 5 && deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)) {
+        setDeliveryError(deliveryError || 'الرجاء تحديد موقع التوصيل على الخريطة.');
+        return;
+    }
+    setMainStep(s => Math.min(s + 1, 7));
   };
   const handlePrev = () => setMainStep(s => Math.max(s - 1, 1));
 
@@ -225,9 +298,11 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
         { number: 2, title: 'الرخصة' },
         { number: 3, title: 'الهوية' },
         { number: 4, title: 'التواريخ' },
-        { number: 5, title: 'الإضافات' },
-        { number: 6, title: 'التأكيد' },
+        { number: 5, title: 'التوصيل' },
+        { number: 6, title: 'الإضافات' },
+        { number: 7, title: 'التأكيد' },
     ];
+    // Stepper rendering logic is fine, but needs to handle 7 steps now
     return (
         <nav aria-label="Progress">
             <ol role="list" className="flex items-center">
@@ -237,7 +312,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
                             <div className="flex items-center">
                                 <span className="flex h-9 items-center">
                                     <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-orange-600">
-                                        <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clipRule="evenodd" /></svg>
+                                        <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clipRule="evenodd" /></svg>
                                     </span>
                                 </span>
                                 {stepIdx !== steps.length - 1 && <div className="absolute top-4 right-0 -mr-px h-0.5 w-full bg-orange-600" />}
@@ -269,87 +344,141 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
 
   const renderMainStepContent = () => {
     switch (mainStep) {
-      case 1: // Contact Info
+      case 1: // Contact
         return (
-          <div>
-            <h4 className="font-bold text-lg mb-2 border-b pb-1">بيانات التواصل</h4>
-            <div className="space-y-4 mt-4">
-                <Input label="رقم الجوال (مطلوب)" type="tel" name="phone1" value={contact.phone1} onChange={handleContactChange} required />
-                {errors.phone1 && <p className="text-red-500 text-xs mt-1">{errors.phone1}</p>}
-                <Input label="رقم جوال ثاني (اختياري)" type="tel" name="phone2" value={contact.phone2} onChange={handleContactChange} />
-                <Input label="العنوان الحالي (مطلوب)" type="text" name="address" value={contact.address} onChange={handleContactChange} required />
-                {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+            <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">1. بيانات التواصل</h4>
+                <div className="space-y-4">
+                    <Input
+                      label="رقم الجوال الأساسي"
+                      type="tel"
+                      name="phone1"
+                      value={contact.phone1}
+                      onChange={handleContactChange}
+                      required
+                      placeholder="05xxxxxxxx"
+                    />
+                    <Input
+                      label="رقم جوال إضافي (اختياري)"
+                      type="tel"
+                      name="phone2"
+                      value={contact.phone2 || ''}
+                      onChange={handleContactChange}
+                      placeholder="05xxxxxxxx"
+                    />
+                    <Input
+                      label="العنوان"
+                      type="text"
+                      name="address"
+                      value={contact.address}
+                      onChange={handleContactChange}
+                      required
+                      placeholder="المدينة, الحي, الشارع"
+                    />
+                </div>
+                {errors.contact && <p className="text-red-500 text-sm mt-2">{errors.contact}</p>}
+                <div className="mt-6 pt-4 border-t flex justify-end">
+                    <Button onClick={handleNext}>التالي</Button>
+                </div>
             </div>
-            <div className="mt-6 pt-4 border-t flex justify-end">
-                <Button onClick={handleNext}>التالي</Button>
-            </div>
-          </div>
         );
       case 2: // License
         return (
             <div>
-              <h4 className="font-bold text-lg mb-2 border-b pb-1">رخصة القيادة</h4>
-              <div className="space-y-4 mt-4">
-                  <div>
-                      <label htmlFor="license" className="block text-sm font-medium text-gray-800">صورة رخصة القيادة (مطلوب)</label>
-                      <p className="text-xs text-gray-500 mb-1">JPG, PNG, PDF (حد أقصى 5MB)</p>
-                      <input id="license" name="license" type="file" accept="image/png, image/jpeg, application/pdf" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:me-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"/>
-                      {documents.license && <p className="text-xs text-green-600 mt-1">تم اختيار: {documents.license.name}</p>}
-                      {errors.license && <p className="text-red-500 text-xs mt-1">{errors.license}</p>}
-                  </div>
-                  <div>
-                      <Input label="تاريخ انتهاء الرخصة (مطلوب)" type="date" name="licenseExpiry" value={documents.licenseExpiry} onChange={handleDocsInputChange} required />
-                      {errors.licenseExpiry && <p className="text-red-500 text-xs mt-1">{errors.licenseExpiry}</p>}
-                  </div>
-              </div>
-              <div className="mt-6 pt-4 border-t flex justify-between">
-                  <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                  <Button onClick={handleNext}>التالي</Button>
-              </div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">2. رخصة القيادة</h4>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="license" className="block text-sm font-medium text-gray-700 mb-1">صورة الرخصة (سارية المفعول)</label>
+                        <input id="license" name="license" type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"/>
+                        {documents.license && <p className="text-xs text-gray-500 mt-1">تم اختيار: {documents.license.name}</p>}
+                    </div>
+                    <Input
+                      label="تاريخ انتهاء الرخصة"
+                      type="date"
+                      name="licenseExpiry"
+                      value={documents.licenseExpiry}
+                      onChange={handleDocsInputChange}
+                      required
+                    />
+                </div>
+                {errors.documents && <p className="text-red-500 text-sm mt-2">{errors.documents}</p>}
+                <div className="mt-6 pt-4 border-t flex justify-between">
+                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
+                    <Button onClick={handleNext}>التالي</Button>
+                </div>
             </div>
         );
       case 3: // ID Card
         return (
+             <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">3. وثيقة إثبات الهوية</h4>
+                <div className="space-y-4">
+                     <div>
+                        <label htmlFor="id_card" className="block text-sm font-medium text-gray-700 mb-1">صورة الهوية الوطنية أو الإقامة</label>
+                        <input id="id_card" name="id_card" type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"/>
+                        {documents.id_card && <p className="text-xs text-gray-500 mt-1">تم اختيار: {documents.id_card.name}</p>}
+                    </div>
+                </div>
+                {errors.id_card && <p className="text-red-500 text-sm mt-2">{errors.id_card}</p>}
+                <div className="mt-6 pt-4 border-t flex justify-between">
+                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
+                    <Button onClick={handleNext}>التالي</Button>
+                </div>
+            </div>
+        );
+      case 4: // Dates
+        return (
             <div>
-              <h4 className="font-bold text-lg mb-2 border-b pb-1">وثيقة إثبات الهوية</h4>
-              <div className="mt-4">
-                  <label htmlFor="id_card" className="block text-sm font-medium text-gray-800">صورة الهوية / الإقامة (مطلوب)</label>
-                  <p className="text-xs text-gray-500 mb-1">JPG, PNG, PDF (حد أقصى 5MB)</p>
-                  <input id="id_card" name="id_card" type="file" accept="image/png, image/jpeg, application/pdf" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:me-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"/>
-                  {documents.id_card && <p className="text-xs text-green-600 mt-1">تم اختيار: {documents.id_card.name}</p>}
-                  {errors.id_card && <p className="text-red-500 text-xs mt-1">{errors.id_card}</p>}
-              </div>
-              <div className="mt-6 pt-4 border-t flex justify-between">
-                  <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                  <Button onClick={handleNext}>التالي</Button>
-              </div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">4. مدة الإيجار</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                    <Input label="تاريخ الاستلام" type="date" value={startDate} min={new Date().toISOString().split('T')[0]} onChange={e => setStartDate(e.target.value)} />
+                    <Select label="وقت الاستلام" id="start-time" value={startTime} onChange={e => setStartTime(e.target.value)}>
+                        {timeOptions.map(time => <option key={`start-${time}`} value={time}>{time}</option>)}
+                    </Select>
+                    <Input label="تاريخ التسليم" type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
+                    <Select label="وقت التسليم" id="end-time" value={endTime} onChange={e => setEndTime(e.target.value)}>
+                        {timeOptions.map(time => <option key={`end-${time}`} value={time}>{time}</option>)}
+                    </Select>
+                </div>
+                {dateError && (<p className="text-red-500 text-sm my-4">{dateError}</p>)}
+                <div className="mt-6 pt-4 border-t flex justify-between">
+                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
+                    <Button onClick={handleNext} disabled={!!dateError || days === 0}>التالي</Button>
+                </div>
             </div>
         );
-      case 4: // Rental Details
+      case 5: // Delivery
         return (
-          <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
-                <Input label="تاريخ الاستلام" type="date" value={startDate} min={new Date().toISOString().split('T')[0]} onChange={e => setStartDate(e.target.value)} />
-                <Select label="وقت الاستلام" id="start-time" value={startTime} onChange={e => setStartTime(e.target.value)}>
-                    {timeOptions.map(time => <option key={`start-${time}`} value={time}>{time}</option>)}
-                </Select>
-                <Input label="تاريخ التسليم" type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
-                <Select label="وقت التسليم" id="end-time" value={endTime} onChange={e => setEndTime(e.target.value)}>
-                    {timeOptions.map(time => <option key={`end-${time}`} value={time}>{time}</option>)}
-                </Select>
+            <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">5. التوصيل والاستلام</h4>
+                <div className="space-y-3">
+                    <label className="flex items-center p-3 border rounded-lg cursor-pointer"><input type="radio" name="deliveryOption" value="branch" checked={deliveryOption === 'branch'} onChange={() => setDeliveryOption('branch')} className="ms-2" /> استلام وتسليم السيارة من الفرع</label>
+                    <label className="flex items-center p-3 border rounded-lg cursor-pointer"><input type="radio" name="deliveryOption" value="delivery" checked={deliveryOption === 'delivery'} onChange={() => setDeliveryOption('delivery')} className="ms-2" /> توصيل السيارة إلى موقعي فقط</label>
+                    <label className="flex items-center p-3 border rounded-lg cursor-pointer"><input type="radio" name="deliveryOption" value="delivery_pickup" checked={deliveryOption === 'delivery_pickup'} onChange={() => setDeliveryOption('delivery_pickup')} className="ms-2" /> توصيل واستلام السيارة من موقعي</label>
+                </div>
+                {deliveryOption !== 'branch' && (
+                    <div className="mt-4">
+                        <p className="mb-2 text-sm text-gray-600">الرجاء تحديد موقعك على الخريطة (نطاق التوصيل 40 كم).</p>
+                        <div ref={mapContainerRef} className="h-64 w-full rounded-lg z-0 bg-gray-200"></div>
+                        {distance !== null && (
+                            <div className="mt-2 text-sm font-medium">
+                                <p>المسافة: {distance.toFixed(1)} كم</p>
+                                <p>رسوم الخدمة: {deliveryFee} ريال</p>
+                            </div>
+                        )}
+                        {deliveryError && <p className="text-red-500 text-sm mt-2">{deliveryError}</p>}
+                    </div>
+                )}
+                 <div className="mt-6 pt-4 border-t flex justify-between">
+                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
+                    <Button onClick={handleNext} disabled={deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)}>التالي</Button>
+                </div>
             </div>
-             {dateError && (
-                <p className="text-red-500 text-sm my-4">{dateError}</p>
-            )}
-             <div className="mt-6 pt-4 border-t flex justify-between">
-                <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                <Button onClick={handleNext} disabled={!!dateError || days === 0}>التالي</Button>
-            </div>
-          </div>
         );
-      case 5: // Options
+      case 6: // Options
         return (
           <div>
+            <h4 className="font-bold text-lg mb-4 border-b pb-2">6. الإضافات الاختيارية</h4>
             <div className="space-y-3">
               <label className="flex items-center"><input type="checkbox" name="insurance" checked={options.insurance} onChange={handleOptionChange} className="ms-2" /> تأمين شامل (+50 ريال/يوم)</label>
               <label className="flex items-center"><input type="checkbox" name="extra_driver" checked={options.extra_driver} onChange={handleOptionChange} className="ms-2" /> سائق إضافي (+50 ريال)</label>
@@ -363,13 +492,15 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
             </div>
           </div>
         );
-      case 6: // Summary & Confirm
+      case 7: // Summary & Confirm
         return (
             <div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">7. ملخص الحجز</h4>
                 <div className="space-y-2 text-gray-700">
                     <div className="flex justify-between"><span>مدة الإيجار</span> <span>{days} يوم</span></div>
                     <div className="flex justify-between"><span>السعر الأساسي</span> <span>{price.base.toFixed(2)} ريال</span></div>
                     {price.extras > 0 && <div className="flex justify-between"><span>الإضافات</span> <span>{price.extras.toFixed(2)} ريال</span></div>}
+                    {price.delivery > 0 && <div className="flex justify-between"><span>رسوم التوصيل</span> <span>{price.delivery.toFixed(2)} ريال</span></div>}
                     <div className="flex justify-between"><span>ضريبة القيمة المضافة (15%)</span> <span>{price.tax.toFixed(2)} ريال</span></div>
                     <hr className="my-2"/>
                     <div className="flex justify-between font-bold text-xl"><span>الإجمالي</span> <span>{price.total.toFixed(2)} ريال</span></div>

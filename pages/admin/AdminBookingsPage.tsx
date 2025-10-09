@@ -16,7 +16,7 @@ const AdminBookingsPage: React.FC = () => {
         ? BOOKINGS.filter(b => b.branchId === user.branchId)
         : BOOKINGS;
     
-    const [bookings, setBookings] = useState(initialBookings as unknown as Booking[]);
+    const [bookings, setBookings] = useState(initialBookings);
     
     const carModelsMap = useMemo(() => new Map(CAR_MODELS.map(m => [m.key, m])), []);
     const carsMap = useMemo(() => new Map(CARS.map(c => [c.id, c])), []);
@@ -83,15 +83,16 @@ const AdminBookingsPage: React.FC = () => {
     };
     
     const exportToCSV = () => {
-        const headers = ["ID", "Customer", "Car", "Branch", "Start Date", "End Date", "Days", "Total Price", "Status"];
+        const headers = ["رقم الحجز", "العميل", "الجوال", "السيارة", "الفرع", "تاريخ البدء", "تاريخ الانتهاء", "الأيام", "الإجمالي", "الحالة"];
         const rows = bookings.map(booking => {
             const car = getFullCarDetails(booking.carId);
             const customer = USERS.find(u => u.id === booking.userId || u.id === 'user-customer');
             const branch = BRANCHES.find(b => b.id === booking.branchId);
             
             return [
-                booking.id,
+                booking.bookingNumber,
                 `"${customer?.name}"`,
+                booking.contact.phone1,
                 `"${car?.make} ${car?.model}"`,
                 `"${branch?.name}"`,
                 formatDateTime(booking.startDate),
@@ -128,7 +129,7 @@ const AdminBookingsPage: React.FC = () => {
                 <table className="w-full whitespace-no-wrap">
                     <thead>
                         <tr className="text-right font-semibold tracking-wide text-gray-500 uppercase border-b bg-gray-50">
-                            <th className="px-4 py-3">العميل</th>
+                            <th className="px-4 py-3"># الحجز / العميل</th>
                             <th className="px-4 py-3">السيارة</th>
                             {user?.role === UserRole.HeadAdmin && <th className="px-4 py-3 hidden xl:table-cell">الفرع</th>}
                             <th className="px-4 py-3">التواريخ</th>
@@ -144,7 +145,11 @@ const AdminBookingsPage: React.FC = () => {
                             const branch = BRANCHES.find(b => b.id === booking.branchId);
                             return (
                                 <tr key={booking.id} className="text-gray-700">
-                                    <td className="px-4 py-3">{customer?.name}</td>
+                                    <td className="px-4 py-3">
+                                        <p className="font-semibold">{booking.bookingNumber}</p>
+                                        <p className="text-sm text-gray-600">{customer?.name}</p>
+                                        <p className="text-xs text-gray-500">{booking.contact.phone1}</p>
+                                    </td>
                                     <td className="px-4 py-3">{car?.make} {car?.model}</td>
                                     {user?.role === UserRole.HeadAdmin && <td className="px-4 py-3 hidden xl:table-cell">{branch?.name}</td>}
                                     <td className="px-4 py-3 text-sm">
@@ -173,8 +178,10 @@ const AdminBookingsPage: React.FC = () => {
                         <div key={booking.id} className="bg-white p-4 rounded-lg shadow">
                             <div className="flex justify-between items-start">
                                 <div>
+                                    <p className="font-semibold text-gray-500 text-xs">{booking.bookingNumber}</p>
                                     <p className="font-bold text-lg">{customer?.name}</p>
-                                    <p className="text-sm text-gray-600">{car?.make} {car?.model}</p>
+                                    <p className="text-sm text-gray-500">{booking.contact.phone1}</p>
+                                    <p className="text-sm text-gray-600 mt-1">{car?.make} {car?.model}</p>
                                     {user?.role === UserRole.HeadAdmin && <p className="text-xs text-gray-500">{branch?.name}</p>}
                                 </div>
                                 {getStatusChip(booking.status)}
