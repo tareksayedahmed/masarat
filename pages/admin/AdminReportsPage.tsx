@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo } from 'react';
 import { BOOKINGS, BRANCHES, CARS, CAR_MODELS, USERS } from '../../constants';
 import { Booking, FullCarDetails } from '../../types';
@@ -92,11 +90,8 @@ const AdminReportsPage: React.FC = () => {
         const projectedRevenue = activeAndConfirmed.reduce((sum, b) => sum + b.priceBreakdown.total, 0);
         const avgBookingValue = completedBookings.length > 0 ? totalRevenue / completedBookings.length : 0;
 
-        // FIX: Explicitly type the accumulator for the reduce function to ensure
-        // TypeScript correctly infers the type of `revenueByBranch`. This prevents
-        // `data` from being typed as `unknown`, resolving errors when trying to 
-        // access its properties.
-        const revenueByBranch = completedBookings.reduce<Record<string, { revenue: number; count: number }>>((acc, booking) => {
+        // FIX: Explicitly type the accumulator to prevent acc[branchId] from being typed as 'unknown'.
+        const revenueByBranch = completedBookings.reduce((acc, booking) => {
             const branchId = booking.branchId;
             if (!acc[branchId]) {
                 acc[branchId] = { revenue: 0, count: 0 };
@@ -104,7 +99,7 @@ const AdminReportsPage: React.FC = () => {
             acc[branchId].revenue += booking.priceBreakdown.total;
             acc[branchId].count += 1;
             return acc;
-        }, {});
+        }, {} as Record<string, { revenue: number; count: number }>);
 
         const branchReport = Object.entries(revenueByBranch).map(([branchId, data]) => ({
             branchId,

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
 import Logo from '../ui/Logo';
@@ -95,7 +94,6 @@ const AdminLayout: React.FC = () => {
     
     // --- MOBILE BOTTOM NAV ---
     const navItems = useMemo(() => {
-        // FIX: Explicitly define the type for `items` to allow for different shapes (links vs buttons).
         const items: Array<{
             path?: string;
             icon: React.ReactNode;

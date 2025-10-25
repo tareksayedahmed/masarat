@@ -33,7 +33,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -47,14 +47,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                 setError('الاسم مطلوب.');
                 return;
             }
-            if (register(name, email, password)) {
+            const success = await register(name, email, password);
+            if (success) {
                 onSuccess();
             } else {
-                setError('هذا البريد الإلكتروني مسجل بالفعل.');
+                setError('هذا البريد الإلكتروني مسجل بالفعل أو حدث خطأ ما.');
             }
         } else {
             // Login logic
-            if (login(email, password)) {
+            const success = await login(email, password);
+            if (success) {
                 onSuccess();
             } else {
                 setError('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
@@ -62,9 +64,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
         }
     };
     
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = async (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            handleSubmit(e as unknown as React.FormEvent);
+            await handleSubmit(e as unknown as React.FormEvent);
         }
     }
 

@@ -37,7 +37,6 @@ const CarsPage: React.FC = () => {
     }
 
 
-    // FIX: Add an explicit return type to the map callback to ensure correct type inference for the filter's type predicate.
     return physicalCarsInBranch.map((car): (FullCarDetails & { branchName?: string }) | null => {
         const model = carModelsMap.get(car.modelKey);
         if (!model) return null;

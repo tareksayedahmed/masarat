@@ -17,10 +17,7 @@ const Header: React.FC = () => {
 
   // Group branches by region for the dropdown
   const branchesByRegion = useMemo(() => {
-    // FIX: Explicitly typed the accumulator in the `reduce` function to correctly
-    // type `branchesByRegion`. This resolves an issue where TypeScript could not infer
-    // the type of the `branches` variable within the subsequent `.map()` call,
-    // causing a compilation error.
+    // FIX: Explicitly type the accumulator to prevent 'branches' from being typed as 'unknown'.
     return BRANCHES.reduce((acc: Record<string, Branch[]>, branch) => {
       const region = branch.region;
       if (!acc[region]) {
@@ -28,7 +25,7 @@ const Header: React.FC = () => {
       }
       acc[region].push(branch);
       return acc;
-    }, {});
+    }, {} as Record<string, Branch[]>);
   }, []);
 
   // Close dropdown when clicking outside
