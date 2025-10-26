@@ -1,6 +1,8 @@
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
-import { FullCarDetails } from '../../types';
+import { FullCarDetails, Booking } from '../../types';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -11,7 +13,7 @@ import { BRANCHES } from '../../constants';
 interface BookingFormProps {
   car: FullCarDetails;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (data: Omit<Booking, 'id' | 'bookingNumber' | 'status'>) => void;
 }
 
 const generateTimeOptions = () => {
@@ -62,7 +64,6 @@ const getInitialDateTime = () => {
 const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) => {
   const { user } = useAuth();
   const [mainStep, setMainStep] = useState(1);
-  const [isCarDetailsVisible, setIsCarDetailsVisible] = useState(true);
 
   const initialDateTime = getInitialDateTime();
   const [startDate, setStartDate] = useState(initialDateTime.startDate);
@@ -81,13 +82,12 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     internationalPermit: false,
   });
   
-  const [documents, setDocuments] = useState<{ license: File | null, id_card: File | null, licenseExpiry: string }>({ license: null, id_card: null, licenseExpiry: '' });
+  const [documents, setDocuments] = useState<{ license: string | null, id_card: string | null, licenseExpiry: string }>({ license: null, id_card: null, licenseExpiry: '' });
   const [contact, setContact] = useState({ phone1: '', phone2: '', address: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const timeOptions = useMemo(() => generateTimeOptions(), []);
   
-  // Delivery State
   const [deliveryOption, setDeliveryOption] = useState<'branch' | 'delivery' | 'delivery_pickup'>('branch');
   const [deliveryLocation, setDeliveryLocation] = useState<{lat: number, lng: number} | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -97,12 +97,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-
-
-  useEffect(() => {
-    setIsCarDetailsVisible(mainStep >= 6);
-  }, [mainStep]);
-
 
   useEffect(() => {
     if (!startDate || !endDate || !startTime || !endTime) {
@@ -136,7 +130,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
 
   }, [startDate, startTime, endDate, endTime]);
   
-  // Map initialization and cleanup
   useEffect(() => {
     if (mainStep === 5 && deliveryOption !== 'branch' && mapContainerRef.current && !mapRef.current) {
         const branch = BRANCHES.find(b => b.id === car.branchId);
@@ -172,14 +165,9 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
                 setDeliveryLocation({ lat: position.lat, lng: position.lng });
             });
         }
-    } else if (mapRef.current && (mainStep !== 5 || deliveryOption === 'branch')) {
-        mapRef.current.remove();
-        mapRef.current = null;
-        markerRef.current = null;
     }
-  }, [mainStep, deliveryOption, car.branchId]);
+  }, [mainStep, deliveryOption, car.branchId, deliveryLocation]);
   
-  // Calculate distance and fee
   useEffect(() => {
     const branch = BRANCHES.find(b => b.id === car.branchId);
     if (!deliveryLocation || !branch || !branch.lat || !branch.lng) {
@@ -211,7 +199,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     }
   }, [deliveryLocation, deliveryOption, car.branchId]);
 
-
   const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOptions({ ...options, [e.target.name]: e.target.checked });
   };
@@ -219,7 +206,12 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files.length > 0) {
-      setDocuments({ ...documents, [name]: files[0] });
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDocuments({ ...documents, [name]: reader.result as string });
+      };
+      reader.readAsDataURL(file);
     }
   };
   
@@ -231,19 +223,21 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
       setContact({ ...contact, [e.target.name]: e.target.value });
   };
 
+  // FIX: The `priceBreakdown` object was missing the `insurance` property.
+  // Separated insurance cost from extras to match the `Booking` type definition.
   const price = useMemo(() => {
-    let base = days > 0 ? car.daily_price * days : 0;
+    const base = days > 0 ? car.daily_price * days : 0;
+    const insuranceCost = options.insurance ? (50 * days) : 0;
     let extrasTotal = 0;
-    if (options.insurance) extrasTotal += (50 * days);
     if (options.extra_driver) extrasTotal += 50;
     if (options.child_seat) extrasTotal += 30;
     if (options.internationalPermit) extrasTotal += 100;
     
-    const subtotal = base + extrasTotal + deliveryFee;
+    const subtotal = base + insuranceCost + extrasTotal + deliveryFee;
     const tax = subtotal * 0.15;
     const total = subtotal + tax;
 
-    return { base, extras: extrasTotal, delivery: deliveryFee, tax, total };
+    return { base, insurance: insuranceCost, extras: extrasTotal, delivery: deliveryFee, tax, total };
   }, [car.daily_price, days, options, deliveryFee]);
 
  const validateStep1 = () => {
@@ -273,7 +267,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
     return Object.keys(newErrors).length === 0;
   };
 
-
   const handleNext = () => {
     setErrors({});
     if (mainStep === 1 && !validateStep1()) return;
@@ -291,6 +284,24 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
   };
   const handlePrev = () => setMainStep(s => Math.max(s - 1, 1));
 
+  const handleConfirmClick = () => {
+    if (!user) return;
+    const bookingData = {
+        carId: car.id,
+        userId: user.id,
+        branchId: car.branchId,
+        startDate: new Date(`${startDate}T${startTime}`).toISOString(),
+        endDate: new Date(`${endDate}T${endTime}`).toISOString(),
+        days,
+        options,
+        priceBreakdown: price,
+        documents,
+        contact,
+        deliveryOption,
+        deliveryLocation: deliveryOption !== 'branch' && deliveryLocation ? { ...deliveryLocation, address: 'الموقع المحدد على الخريطة' } : undefined,
+    };
+    onConfirm(bookingData);
+  };
 
   const Stepper = () => {
     const steps = [
@@ -302,7 +313,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
         { number: 6, title: 'الإضافات' },
         { number: 7, title: 'التأكيد' },
     ];
-    // Stepper rendering logic is fine, but needs to handle 7 steps now
     return (
         <nav aria-label="Progress">
             <ol role="list" className="flex items-center">
@@ -344,45 +354,20 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
 
   const renderMainStepContent = () => {
     switch (mainStep) {
-      case 1: // Contact
+      case 1:
         return (
             <div>
                 <h4 className="font-bold text-lg mb-4 border-b pb-2">1. بيانات التواصل</h4>
                 <div className="space-y-4">
-                    <Input
-                      label="رقم الجوال الأساسي"
-                      type="tel"
-                      name="phone1"
-                      value={contact.phone1}
-                      onChange={handleContactChange}
-                      required
-                      placeholder="05xxxxxxxx"
-                    />
-                    <Input
-                      label="رقم جوال إضافي (اختياري)"
-                      type="tel"
-                      name="phone2"
-                      value={contact.phone2 || ''}
-                      onChange={handleContactChange}
-                      placeholder="05xxxxxxxx"
-                    />
-                    <Input
-                      label="العنوان"
-                      type="text"
-                      name="address"
-                      value={contact.address}
-                      onChange={handleContactChange}
-                      required
-                      placeholder="المدينة, الحي, الشارع"
-                    />
+                    <Input label="رقم الجوال الأساسي" type="tel" name="phone1" value={contact.phone1} onChange={handleContactChange} required placeholder="05xxxxxxxx" />
+                    <Input label="رقم جوال إضافي (اختياري)" type="tel" name="phone2" value={contact.phone2 || ''} onChange={handleContactChange} placeholder="05xxxxxxxx" />
+                    <Input label="العنوان" type="text" name="address" value={contact.address} onChange={handleContactChange} required placeholder="المدينة, الحي, الشارع" />
                 </div>
                 {errors.contact && <p className="text-red-500 text-sm mt-2">{errors.contact}</p>}
-                <div className="mt-6 pt-4 border-t flex justify-end">
-                    <Button onClick={handleNext}>التالي</Button>
-                </div>
+                <div className="mt-6 pt-4 border-t flex justify-end"> <Button onClick={handleNext}>التالي</Button> </div>
             </div>
         );
-      case 2: // License
+      case 2:
         return (
             <div>
                 <h4 className="font-bold text-lg mb-4 border-b pb-2">2. رخصة القيادة</h4>
@@ -390,25 +375,15 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
                     <div>
                         <label htmlFor="license" className="block text-sm font-medium text-gray-700 mb-1">صورة الرخصة (سارية المفعول)</label>
                         <input id="license" name="license" type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"/>
-                        {documents.license && <p className="text-xs text-gray-500 mt-1">تم اختيار: {documents.license.name}</p>}
+                        {documents.license && <p className="text-xs text-gray-500 mt-1">تم اختيار الملف.</p>}
                     </div>
-                    <Input
-                      label="تاريخ انتهاء الرخصة"
-                      type="date"
-                      name="licenseExpiry"
-                      value={documents.licenseExpiry}
-                      onChange={handleDocsInputChange}
-                      required
-                    />
+                    <Input label="تاريخ انتهاء الرخصة" type="date" name="licenseExpiry" value={documents.licenseExpiry} onChange={handleDocsInputChange} required />
                 </div>
                 {errors.documents && <p className="text-red-500 text-sm mt-2">{errors.documents}</p>}
-                <div className="mt-6 pt-4 border-t flex justify-between">
-                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                    <Button onClick={handleNext}>التالي</Button>
-                </div>
+                <div className="mt-6 pt-4 border-t flex justify-between"> <Button onClick={handlePrev} variant="secondary">السابق</Button> <Button onClick={handleNext}>التالي</Button> </div>
             </div>
         );
-      case 3: // ID Card
+      case 3:
         return (
              <div>
                 <h4 className="font-bold text-lg mb-4 border-b pb-2">3. وثيقة إثبات الهوية</h4>
@@ -416,38 +391,28 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
                      <div>
                         <label htmlFor="id_card" className="block text-sm font-medium text-gray-700 mb-1">صورة الهوية الوطنية أو الإقامة</label>
                         <input id="id_card" name="id_card" type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"/>
-                        {documents.id_card && <p className="text-xs text-gray-500 mt-1">تم اختيار: {documents.id_card.name}</p>}
+                        {documents.id_card && <p className="text-xs text-gray-500 mt-1">تم اختيار الملف.</p>}
                     </div>
                 </div>
                 {errors.id_card && <p className="text-red-500 text-sm mt-2">{errors.id_card}</p>}
-                <div className="mt-6 pt-4 border-t flex justify-between">
-                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                    <Button onClick={handleNext}>التالي</Button>
-                </div>
+                <div className="mt-6 pt-4 border-t flex justify-between"> <Button onClick={handlePrev} variant="secondary">السابق</Button> <Button onClick={handleNext}>التالي</Button> </div>
             </div>
         );
-      case 4: // Dates
+      case 4:
         return (
             <div>
                 <h4 className="font-bold text-lg mb-4 border-b pb-2">4. مدة الإيجار</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
                     <Input label="تاريخ الاستلام" type="date" value={startDate} min={new Date().toISOString().split('T')[0]} onChange={e => setStartDate(e.target.value)} />
-                    <Select label="وقت الاستلام" id="start-time" value={startTime} onChange={e => setStartTime(e.target.value)}>
-                        {timeOptions.map(time => <option key={`start-${time}`} value={time}>{time}</option>)}
-                    </Select>
+                    <Select label="وقت الاستلام" id="start-time" value={startTime} onChange={e => setStartTime(e.target.value)}> {timeOptions.map(time => <option key={`start-${time}`} value={time}>{time}</option>)} </Select>
                     <Input label="تاريخ التسليم" type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} />
-                    <Select label="وقت التسليم" id="end-time" value={endTime} onChange={e => setEndTime(e.target.value)}>
-                        {timeOptions.map(time => <option key={`end-${time}`} value={time}>{time}</option>)}
-                    </Select>
+                    <Select label="وقت التسليم" id="end-time" value={endTime} onChange={e => setEndTime(e.target.value)}> {timeOptions.map(time => <option key={`end-${time}`} value={time}>{time}</option>)} </Select>
                 </div>
                 {dateError && (<p className="text-red-500 text-sm my-4">{dateError}</p>)}
-                <div className="mt-6 pt-4 border-t flex justify-between">
-                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                    <Button onClick={handleNext} disabled={!!dateError || days === 0}>التالي</Button>
-                </div>
+                <div className="mt-6 pt-4 border-t flex justify-between"> <Button onClick={handlePrev} variant="secondary">السابق</Button> <Button onClick={handleNext} disabled={!!dateError || days === 0}>التالي</Button> </div>
             </div>
         );
-      case 5: // Delivery
+      case 5:
         return (
             <div>
                 <h4 className="font-bold text-lg mb-4 border-b pb-2">5. التوصيل والاستلام</h4>
@@ -460,22 +425,14 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
                     <div className="mt-4">
                         <p className="mb-2 text-sm text-gray-600">الرجاء تحديد موقعك على الخريطة (نطاق التوصيل 40 كم).</p>
                         <div ref={mapContainerRef} className="h-64 w-full rounded-lg z-0 bg-gray-200"></div>
-                        {distance !== null && (
-                            <div className="mt-2 text-sm font-medium">
-                                <p>المسافة: {distance.toFixed(1)} كم</p>
-                                <p>رسوم الخدمة: {deliveryFee} ريال</p>
-                            </div>
-                        )}
+                        {distance !== null && (<div className="mt-2 text-sm font-medium"> <p>المسافة: {distance.toFixed(1)} كم</p> <p>رسوم الخدمة: {deliveryFee} ريال</p> </div>)}
                         {deliveryError && <p className="text-red-500 text-sm mt-2">{deliveryError}</p>}
                     </div>
                 )}
-                 <div className="mt-6 pt-4 border-t flex justify-between">
-                    <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                    <Button onClick={handleNext} disabled={deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)}>التالي</Button>
-                </div>
+                 <div className="mt-6 pt-4 border-t flex justify-between"> <Button onClick={handlePrev} variant="secondary">السابق</Button> <Button onClick={handleNext} disabled={deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)}>التالي</Button> </div>
             </div>
         );
-      case 6: // Options
+      case 6:
         return (
           <div>
             <h4 className="font-bold text-lg mb-4 border-b pb-2">6. الإضافات الاختيارية</h4>
@@ -486,29 +443,21 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
               <label className="flex items-center"><input type="checkbox" name="child_seat" checked={options.child_seat} onChange={handleOptionChange} className="ms-2" /> كرسي أطفال (+30 ريال)</label>
               <label className="flex items-center"><input type="checkbox" name="internationalPermit" checked={options.internationalPermit} onChange={handleOptionChange} className="ms-2" /> تفويض دولي (+100 ريال)</label>
             </div>
-            <div className="mt-6 pt-4 border-t flex justify-between">
-                <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                <Button onClick={handleNext}>التالي</Button>
-            </div>
+            <div className="mt-6 pt-4 border-t flex justify-between"> <Button onClick={handlePrev} variant="secondary">السابق</Button> <Button onClick={handleNext}>التالي</Button> </div>
           </div>
         );
-      case 7: // Summary & Confirm
+      case 7:
         return (
             <div>
-                <h4 className="font-bold text-lg mb-4 border-b pb-2">7. ملخص الحجز</h4>
-                <div className="space-y-2 text-gray-700">
-                    <div className="flex justify-between"><span>مدة الإيجار</span> <span>{days} يوم</span></div>
-                    <div className="flex justify-between"><span>السعر الأساسي</span> <span>{price.base.toFixed(2)} ريال</span></div>
-                    {price.extras > 0 && <div className="flex justify-between"><span>الإضافات</span> <span>{price.extras.toFixed(2)} ريال</span></div>}
-                    {price.delivery > 0 && <div className="flex justify-between"><span>رسوم التوصيل</span> <span>{price.delivery.toFixed(2)} ريال</span></div>}
-                    <div className="flex justify-between"><span>ضريبة القيمة المضافة (15%)</span> <span>{price.tax.toFixed(2)} ريال</span></div>
-                    <hr className="my-2"/>
-                    <div className="flex justify-between font-bold text-xl"><span>الإجمالي</span> <span>{price.total.toFixed(2)} ريال</span></div>
+                <h4 className="font-bold text-lg mb-4 border-b pb-2">7. تأكيد الحجز</h4>
+                <div className="space-y-4 text-gray-700 bg-green-50 p-4 rounded-lg">
+                    <p className="font-semibold">لقد أوشكت على الانتهاء!</p>
+                    <p>يرجى مراجعة ملخص الحجز الكامل على يسار الشاشة. إذا كانت جميع التفاصيل صحيحة، انقر على "تأكيد الحجز المبدئي" لإرسال طلبك.</p>
+                    <p className="text-xs text-gray-500 mt-2">سيقوم أحد موظفينا بمراجعة الطلب والتواصل معك للتأكيد النهائي وطرق الدفع.</p>
                 </div>
-                 <p className="text-xs text-gray-500 mt-4">خيارات الدفع المتاحة: دفع كامل الآن, دفع عربون, أو الحجز بدون دفع (حسب سياسة الفرع).</p>
                 <div className="mt-6 pt-4 border-t flex justify-between">
                     <Button onClick={handlePrev} variant="secondary">السابق</Button>
-                    <Button onClick={onConfirm}>تأكيد الحجز المبدئي</Button>
+                    <Button onClick={handleConfirmClick}>تأكيد الحجز المبدئي</Button>
                 </div>
             </div>
         );
@@ -522,28 +471,42 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onConfirm }) =>
   }
 
   return (
-    <div>
-        {isCarDetailsVisible && (
-            <div className="mb-6 p-4 bg-gray-100 rounded-lg">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-bold">{car.make} {car.model}</h3>
-                        <p className="text-gray-500">{car.category}</p>
-                    </div>
-                     <div className="text-left">
-                        <p className="text-2xl font-extrabold text-orange-600">{car.daily_price} ريال</p>
-                        <p className="text-gray-500">/يوم</p>
-                    </div>
-                </div>
+    <div className="grid grid-cols-1 lg:grid-cols-5 lg:gap-8">
+      {/* Left Summary Column (persistent on large screens) */}
+      <div className="lg:col-span-2 order-last lg:order-first mt-8 lg:mt-0">
+        <div className="p-4 bg-gray-50 rounded-lg sticky top-6 space-y-4 border">
+          {/* Car details */}
+          <div className="flex items-center gap-4 pb-4 border-b">
+            <img src={car.images[0]} alt={`${car.make} ${car.model}`} className="w-24 h-24 object-cover rounded-md flex-shrink-0" />
+            <div>
+              <h3 className="text-lg font-bold">{car.make} {car.model}</h3>
+              <p className="text-sm text-gray-500">{car.category} - {car.year}</p>
             </div>
-        )}
-        <div className="my-8 pb-4">
-            <Stepper />
+          </div>
+          
+          {/* Price summary */}
+          <div className="space-y-2 text-sm">
+            <h4 className="font-bold text-base mb-2">ملخص السعر</h4>
+            <div className="flex justify-between text-gray-600"><span>السعر الأساسي ({days} يوم)</span> <span>{price.base.toFixed(2)} ريال</span></div>
+            {price.insurance > 0 && <div className="flex justify-between text-gray-600"><span>تأمين شامل</span> <span>{price.insurance.toFixed(2)} ريال</span></div>}
+            {price.extras > 0 && <div className="flex justify-between text-gray-600"><span>إضافات أخرى</span> <span>{price.extras.toFixed(2)} ريال</span></div>}
+            {price.delivery > 0 && <div className="flex justify-between text-gray-600"><span>رسوم التوصيل</span> <span>{price.delivery.toFixed(2)} ريال</span></div>}
+            <div className="flex justify-between text-gray-600"><span>ضريبة القيمة المضافة (15%)</span> <span>{price.tax.toFixed(2)} ريال</span></div>
+            <hr className="my-2"/>
+            <div className="flex justify-between font-bold text-lg text-gray-800 pt-2"><span>الإجمالي</span> <span>{price.total.toFixed(2)} ريال</span></div>
+          </div>
         </div>
-        
-        <div className="mt-8">
+      </div>
+
+      {/* Right Form Column */}
+      <div className="lg:col-span-3">
+        <div className="mb-12">
+          <Stepper />
+        </div>
+        <div>
           {renderMainStepContent()}
         </div>
+      </div>
     </div>
   );
 };

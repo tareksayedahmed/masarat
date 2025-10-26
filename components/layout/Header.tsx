@@ -67,11 +67,12 @@ const Header: React.FC = () => {
         </button>
         {isBranchesMenuOpen && (
           <div className="absolute start-0 mt-2 w-max min-w-[400px] max-h-[70vh] overflow-y-auto bg-white rounded-md shadow-lg z-50 p-4 grid grid-cols-2 gap-4">
-            {Object.entries(branchesByRegion).map(([region, branches]) => (
+            {/* FIX: Use Object.keys to iterate and access properties directly for better type inference. */}
+            {Object.keys(branchesByRegion).map((region) => (
               <div key={region}>
                 <h3 className="font-bold text-gray-800 border-b border-gray-200 pb-1 mb-2">{region}</h3>
                 <ul className="space-y-1">
-                  {branches.map(branch => (
+                  {branchesByRegion[region].map(branch => (
                     <li key={branch.id}>
                       <Link to={`/cars/${branch.id}`} onClick={closeAllMenus} className="block px-3 py-1 text-sm text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-md">
                         {branch.name}
@@ -105,11 +106,12 @@ const Header: React.FC = () => {
         </button>
         {isBranchesMenuOpen && (
           <div className="ps-4 mt-2 space-y-2 border-s-2 border-orange-100">
-            {Object.entries(branchesByRegion).map(([region, branches]) => (
+            {/* FIX: Use Object.keys to iterate and access properties directly for better type inference. */}
+            {Object.keys(branchesByRegion).map((region) => (
               <div key={region}>
                 <h3 className="font-semibold text-gray-500 text-sm ps-2">{region}</h3>
                 <ul className="space-y-1 mt-1">
-                  {branches.map(branch => (
+                  {branchesByRegion[region].map(branch => (
                     <li key={branch.id}>
                       <Link to={`/cars/${branch.id}`} onClick={closeAllMenus} className="block px-2 py-1.5 text-sm text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-md">
                         {branch.name}

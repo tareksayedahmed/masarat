@@ -90,8 +90,8 @@ const AdminReportsPage: React.FC = () => {
         const projectedRevenue = activeAndConfirmed.reduce((sum, b) => sum + b.priceBreakdown.total, 0);
         const avgBookingValue = completedBookings.length > 0 ? totalRevenue / completedBookings.length : 0;
 
-        // FIX: Explicitly type the accumulator to prevent acc[branchId] from being typed as 'unknown'.
-        const revenueByBranch = completedBookings.reduce((acc, booking) => {
+        // FIX: By typing the initial value and the accumulator parameter, we ensure type safety within the reduce function.
+        const revenueByBranch = completedBookings.reduce((acc: Record<string, { revenue: number; count: number }>, booking) => {
             const branchId = booking.branchId;
             if (!acc[branchId]) {
                 acc[branchId] = { revenue: 0, count: 0 };

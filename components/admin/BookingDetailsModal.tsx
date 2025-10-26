@@ -42,7 +42,7 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({ isOpen, onClo
     setEditedBooking(booking);
   }, [booking]);
   
-  const customer = USERS.find(u => u.id === booking.userId || u.id === 'user-customer');
+  const customer = USERS.find(u => u.id === booking.userId);
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setEditedBooking({ ...editedBooking, status: e.target.value as Booking['status'] });
@@ -201,7 +201,19 @@ const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({ isOpen, onClo
              </div>
              <div>
                 <h4 className="font-bold">الوثائق</h4>
-                <p className="text-sm text-gray-500">(هنا ستظهر روابط لتحميل وعرض الوثائق المرفوعة)</p>
+                 <div className="flex space-x-4 rtl:space-x-reverse text-sm mt-1">
+                    {booking.documents.license ? (
+                        <a href={booking.documents.license} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">عرض الرخصة</a>
+                    ) : (
+                        <span className="text-gray-500">لا توجد رخصة</span>
+                    )}
+                    {booking.documents.id_card ? (
+                        <a href={booking.documents.id_card} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">عرض الهوية</a>
+                    ) : (
+                        <span className="text-gray-500">لا توجد هوية</span>
+                    )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">تاريخ انتهاء الرخصة: {new Date(booking.documents.licenseExpiry).toLocaleDateString('ar-SA')}</p>
             </div>
             <hr />
             <div className="grid grid-cols-2 gap-4">

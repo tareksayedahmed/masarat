@@ -87,9 +87,9 @@ export interface Booking {
   };
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   documents: {
-    license?: File | null;
+    license?: string | null;
     licenseExpiry: string;
-    id_card?: File | null;
+    id_card?: string | null;
   };
   contact: {
     phone1: string;

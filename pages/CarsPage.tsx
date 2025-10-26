@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Car, Branch, FullCarDetails } from '../types';
+import { Car, Branch, FullCarDetails, Booking } from '../types';
 import { CARS, BRANCHES, CAR_MODELS, E_BRANCH_VISIBLE_REGIONS } from '../constants';
 import CarCard from '../components/booking/CarCard';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/booking/BookingForm';
 import Select from '../components/ui/Select';
 import { useAuth } from '../context/AuthContext';
+import { useBookings } from '../context/BookingContext';
 
 const CarsPage: React.FC = () => {
   const { branchId } = useParams<{ branchId: string }>();
@@ -18,6 +19,7 @@ const CarsPage: React.FC = () => {
   const [yearFilter, setYearFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default');
   const { user } = useAuth();
+  const { addBooking } = useBookings();
   
   const carModelsMap = useMemo(() => new Map(CAR_MODELS.map(m => [m.key, m])), []);
 
@@ -103,7 +105,8 @@ const CarsPage: React.FC = () => {
     setBookingModalOpen(true);
   };
   
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = (bookingData: Omit<Booking, 'id' | 'bookingNumber' | 'status'>) => {
+    addBooking(bookingData);
     setBookingModalOpen(false);
     setConfirmationOpen(true);
   }

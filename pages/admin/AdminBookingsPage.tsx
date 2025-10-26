@@ -1,22 +1,24 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { BOOKINGS, CARS, BRANCHES, USERS, CAR_MODELS } from '../../constants';
+import { CARS, BRANCHES, USERS, CAR_MODELS } from '../../constants';
 import { UserRole, Booking, FullCarDetails } from '../../types';
 import BookingDetailsModal from '../../components/admin/BookingDetailsModal';
 import Button from '../../components/ui/Button';
+import { useBookings } from '../../context/BookingContext';
 
 const AdminBookingsPage: React.FC = () => {
     const { user } = useAuth();
+    const { bookings, updateBooking } = useBookings();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     
     const isBranchScoped = user?.role === UserRole.BranchAdmin || user?.role === UserRole.Operator;
-    
-    const initialBookings = isBranchScoped
-        ? BOOKINGS.filter(b => b.branchId === user.branchId)
-        : BOOKINGS;
-    
-    const [bookings, setBookings] = useState(initialBookings);
+
+    const displayedBookings = useMemo(() => {
+        return isBranchScoped
+            ? bookings.filter(b => b.branchId === user?.branchId)
+            : bookings;
+    }, [bookings, isBranchScoped, user]);
     
     const carModelsMap = useMemo(() => new Map(CAR_MODELS.map(m => [m.key, m])), []);
     const carsMap = useMemo(() => new Map(CARS.map(c => [c.id, c])), []);
@@ -50,7 +52,7 @@ const AdminBookingsPage: React.FC = () => {
     };
 
     const handleSaveBooking = (updatedBooking: Booking) => {
-        setBookings(bookings.map(b => b.id === updatedBooking.id ? updatedBooking : b));
+        updateBooking(updatedBooking);
         handleCloseModal();
     }
 
@@ -84,9 +86,9 @@ const AdminBookingsPage: React.FC = () => {
     
     const exportToCSV = () => {
         const headers = ["رقم الحجز", "العميل", "الجوال", "السيارة", "الفرع", "تاريخ البدء", "تاريخ الانتهاء", "الأيام", "الإجمالي", "الحالة"];
-        const rows = bookings.map(booking => {
+        const rows = displayedBookings.map(booking => {
             const car = getFullCarDetails(booking.carId);
-            const customer = USERS.find(u => u.id === booking.userId || u.id === 'user-customer');
+            const customer = USERS.find(u => u.id === booking.userId);
             const branch = BRANCHES.find(b => b.id === booking.branchId);
             
             return [
@@ -139,9 +141,9 @@ const AdminBookingsPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y">
-                        {bookings.map(booking => {
+                        {displayedBookings.map(booking => {
                             const car = getFullCarDetails(booking.carId);
-                            const customer = USERS.find(u => u.id === booking.userId || u.id === 'user-customer');
+                            const customer = USERS.find(u => u.id === booking.userId);
                             const branch = BRANCHES.find(b => b.id === booking.branchId);
                             return (
                                 <tr key={booking.id} className="text-gray-700">
@@ -170,9 +172,9 @@ const AdminBookingsPage: React.FC = () => {
 
             {/* Mobile & Tablet Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
-                {bookings.map(booking => {
+                {displayedBookings.map(booking => {
                      const car = getFullCarDetails(booking.carId);
-                     const customer = USERS.find(u => u.id === booking.userId || u.id === 'user-customer');
+                     const customer = USERS.find(u => u.id === booking.userId);
                      const branch = BRANCHES.find(b => b.id === booking.branchId);
                      return (
                         <div key={booking.id} className="bg-white p-4 rounded-lg shadow">

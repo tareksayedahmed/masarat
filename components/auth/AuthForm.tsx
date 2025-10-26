@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 
-// SVG Icons for Social Login
+// SVG Icons for Social Login & Success
 const GoogleIcon = () => (
     <svg aria-hidden="true" className="w-5 h-5" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -19,32 +20,47 @@ const FacebookIcon = () => (
     </svg>
 );
 
+const SuccessIcon = () => (
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+        <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+    </div>
+);
+
+
 interface AuthFormProps {
     onSuccess: () => void;
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
-    const { login, register } = useAuth();
-    const [isSignUp, setIsSignUp] = useState(false);
+    const { login, register, forgotPassword, loginWithProvider } = useAuth();
+    const [view, setView] = useState<'login' | 'signup' | 'forgotPassword' | 'forgotPasswordSuccess'>('login');
+    const [isLoading, setIsLoading] = useState(false);
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    
+    const isSignUp = view === 'signup';
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleLoginOrRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
 
         if (isSignUp) {
             // Registration logic
             if (password !== confirmPassword) {
                 setError('كلمتا المرور غير متطابقتين.');
+                setIsLoading(false);
                 return;
             }
             if (!name) {
                 setError('الاسم مطلوب.');
+                setIsLoading(false);
                 return;
             }
             const success = await register(name, email, password);
@@ -62,23 +78,85 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                 setError('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
             }
         }
+        setIsLoading(false);
     };
     
-    const handleKeyDown = async (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            await handleSubmit(e as unknown as React.FormEvent);
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        if (!email) {
+            setError('الرجاء إدخال البريد الإلكتروني.');
+            return;
         }
+        setIsLoading(true);
+        const success = await forgotPassword(email);
+        setIsLoading(false);
+        if (success) {
+            setView('forgotPasswordSuccess');
+        } else {
+            setError('حدث خطأ ما. لم نتمكن من العثور على حساب بهذا البريد الإلكتروني.');
+        }
+    };
+
+    const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+        setError('');
+        setIsLoading(true);
+        const success = await loginWithProvider(provider);
+        if (success) {
+            onSuccess();
+        } else {
+            setError(`فشل تسجيل الدخول باستخدام ${provider}.`);
+        }
+        setIsLoading(false);
+    };
+    
+    if (view === 'forgotPasswordSuccess') {
+        return (
+            <div className="text-center space-y-4">
+                <SuccessIcon />
+                <h3 className="text-xl font-bold text-gray-800">تم الإرسال بنجاح</h3>
+                <p className="text-gray-600">تم إرسال رابط استعادة كلمة المرور إلى <strong>{email}</strong>. الرجاء التحقق من صندوق الوارد الخاص بك (والبريد المزعج).</p>
+                <Button onClick={onSuccess} className="w-full">إغلاق</Button>
+            </div>
+        );
+    }
+    
+    if (view === 'forgotPassword') {
+        return (
+            <div className="space-y-4">
+                <p className="text-center text-gray-600">أدخل بريدك الإلكتروني المسجل وسنرسل لك رابطًا لإعادة تعيين كلمة المرور الخاصة بك.</p>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <Input 
+                        label="البريد الإلكتروني"
+                        type="email" 
+                        placeholder="example@email.com" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
+                    </Button>
+                </form>
+                <p className="text-center text-sm">
+                    <button onClick={() => { setView('login'); setError('') }} className="font-medium text-orange-600 hover:text-orange-500">
+                        العودة لتسجيل الدخول
+                    </button>
+                </p>
+            </div>
+        );
     }
 
     return (
         <div className="space-y-4">
             {/* Social logins */}
             <div className="space-y-3">
-                 <button className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                 <button type="button" onClick={() => handleSocialLogin('google')} disabled={isLoading} className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50">
                     <GoogleIcon />
                     <span className="ms-3">المتابعة باستخدام Google</span>
                 </button>
-                 <button className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm bg-[#1877F2] text-white hover:bg-[#166fe5] font-medium transition-colors">
+                 <button type="button" onClick={() => handleSocialLogin('facebook')} disabled={isLoading} className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm bg-[#1877F2] text-white hover:bg-[#166fe5] font-medium transition-colors disabled:opacity-50">
                     <FacebookIcon />
                     <span className="ms-3">المتابعة باستخدام Facebook</span>
                 </button>
@@ -90,7 +168,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               <div className="flex-grow border-t border-gray-200"></div>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleLoginOrRegister} className="space-y-4">
                 {isSignUp && (
                     <Input 
                         label="الاسم الكامل"
@@ -98,7 +176,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                         placeholder="الاسم الكامل" 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        onKeyDown={handleKeyDown}
                         required
                     />
                 )}
@@ -108,7 +185,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                     placeholder="example@email.com" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={handleKeyDown}
                     required
                 />
                 <Input 
@@ -117,7 +193,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                     placeholder="••••••••" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={handleKeyDown}
                     required
                 />
                  {isSignUp && (
@@ -127,34 +202,30 @@ const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
                         placeholder="••••••••" 
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        onKeyDown={handleKeyDown}
                         required
                     />
                 )}
 
                 {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-                <Button type="submit" className="w-full">
-                    {isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول'}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'جاري التحميل...' : (isSignUp ? 'إنشاء حساب' : 'تسجيل الدخول')}
                 </Button>
             </form>
 
             <p className="text-center text-sm">
                 {isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟'}
-                <button onClick={() => {setIsSignUp(!isSignUp); setError('')}} className="font-medium text-orange-600 hover:text-orange-500 ms-1">
+                <button onClick={() => {setView(isSignUp ? 'login' : 'signup'); setError('')}} className="font-medium text-orange-600 hover:text-orange-500 ms-1">
                     {isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
                 </button>
             </p>
             {!isSignUp && (
                  <p className="text-center text-sm">
-                    <a href="#" className="font-medium text-gray-500 hover:text-orange-500">
+                    <button type="button" onClick={() => { setView('forgotPassword'); setError(''); }} className="font-medium text-gray-500 hover:text-orange-500">
                         هل نسيت كلمة المرور؟
-                    </a>
+                    </button>
                 </p>
             )}
-             <p className="text-xs text-gray-500 text-center leading-relaxed pt-2">
-                <strong>للتجربة:</strong> استخدم head@masarat.com, branch@masarat.com, أو operator@masarat.com للدخول كمسؤول (أي كلمة مرور).
-            </p>
         </div>
     );
 };
