@@ -12,6 +12,10 @@ app.use(cors());
 
 app.use('/api/auth', require('./routes/auth'));
 
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Test API is working!' });
+});
+
 app.get('/', (req, res) => res.json({ message: "Welcome to Masarat API" }));
 
 app.get('/test-db', async (req, res) => {
