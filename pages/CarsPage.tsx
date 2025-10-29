@@ -1,116 +1,105 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Car, Branch, FullCarDetails, Booking } from '../types';
-import { CARS, BRANCHES, CAR_MODELS, E_BRANCH_VISIBLE_REGIONS } from '../constants';
+import { Branch, FullCarDetails, Booking } from '../types';
 import CarCard from '../components/booking/CarCard';
 import Modal from '../components/ui/Modal';
 import BookingForm from '../components/booking/BookingForm';
 import Select from '../components/ui/Select';
-import { useAuth } from '../context/AuthContext';
 import { useBookings } from '../context/BookingContext';
+import api from '../api';
 
 const CarsPage: React.FC = () => {
   const { branchId } = useParams<{ branchId: string }>();
   const [branch, setBranch] = useState<Branch | null>(null);
+  const [branchCars, setBranchCars] = useState<(FullCarDetails & { branchName?: string })[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [selectedCar, setSelectedCar] = useState<FullCarDetails | null>(null);
   const [isBookingModalOpen, setBookingModalOpen] = useState(false);
   const [isConfirmationOpen, setConfirmationOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('default');
-  const { user } = useAuth();
   const { addBooking } = useBookings();
-  
-  const carModelsMap = useMemo(() => new Map(CAR_MODELS.map(m => [m.key, m])), []);
 
-  const branchCars: (FullCarDetails & { branchName?: string })[] = useMemo(() => {
-    const branchesMap = new Map(BRANCHES.map(b => [b.id, b]));
-    
-    let physicalCarsInBranch: Car[];
-    if (branchId === 'e-branch') {
-        const allowedBranchIds = new Set(
-            BRANCHES
-                .filter(b => E_BRANCH_VISIBLE_REGIONS.includes(b.region))
-                .map(b => b.id)
-        );
-        physicalCarsInBranch = CARS.filter(c => c.available && allowedBranchIds.has(c.branchId));
-    } else {
-        physicalCarsInBranch = CARS.filter(c => c.branchId === branchId);
-    }
+  useEffect(() => {
+    const fetchCarsAndBranch = async () => {
+      if (!branchId) return;
+      setIsLoading(true);
+      try {
+        const [branchesRes, fleetRes] = await Promise.all([
+          api.get('/data/branches'),
+          api.get('/data/fleet')
+        ]);
+        
+        const allBranches: Branch[] = branchesRes.data;
+        const currentBranch = allBranches.find(b => b.id === branchId) || null;
+        setBranch(currentBranch);
+        
+        const allCars: FullCarDetails[] = fleetRes.data;
+        let carsForBranch: (FullCarDetails & { branchName?: string })[] = [];
 
+        if (branchId === 'e-branch') {
+           const eBranchRegions = ['الرياض', 'المنطقة الشرقية', 'المنطقة الشمالية'];
+           const allowedBranchIds = new Set(allBranches.filter(b => eBranchRegions.includes(b.region)).map(b => b.id));
+           const branchesMap = new Map(allBranches.map(b => [b.id, b.name]));
+           carsForBranch = allCars
+            .filter(c => c.available && allowedBranchIds.has(c.branchId))
+            .map(c => ({...c, branchName: branchesMap.get(c.branchId)}));
+        } else {
+            carsForBranch = allCars.filter(c => c.branchId === branchId);
+        }
+        
+        setBranchCars(carsForBranch);
 
-    return physicalCarsInBranch.map((car): (FullCarDetails & { branchName?: string }) | null => {
-        const model = carModelsMap.get(car.modelKey);
-        if (!model) return null;
+      } catch (error) {
+        console.error("Failed to fetch car data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-        const carBranch = branchesMap.get(car.branchId);
-
-        return {
-            ...car,
-            make: model.make,
-            model: model.model,
-            year: model.year,
-            category: model.category,
-            daily_price: model.daily_price,
-            weekly_price: model.weekly_price,
-            monthly_price: model.monthly_price,
-            images: model.images,
-            branchName: branchId === 'e-branch' ? carBranch?.name : undefined,
-        };
-    }).filter((c): c is (FullCarDetails & { branchName?: string }) => c !== null);
-  }, [branchId, carModelsMap]);
+    fetchCarsAndBranch();
+  }, [branchId]);
 
   const availableYears = useMemo(() => {
     const years = new Set(branchCars.map(car => car.year));
-    return Array.from(years).sort((a, b) => b - a); // Sort years descending
+    return Array.from(years).sort((a, b) => b - a);
   }, [branchCars]);
 
   const processedCars = useMemo(() => {
     let cars = [...branchCars];
-
-    // Apply category filter
-    if (categoryFilter !== 'all') {
-        cars = cars.filter(car => car.category === categoryFilter);
-    }
-
-    // Apply year filter
-    if (yearFilter !== 'all') {
-        cars = cars.filter(car => car.year.toString() === yearFilter);
-    }
-
-    // Apply sorting
+    if (categoryFilter !== 'all') cars = cars.filter(car => car.category === categoryFilter);
+    if (yearFilter !== 'all') cars = cars.filter(car => car.year.toString() === yearFilter);
     switch (sortOrder) {
-        case 'price_asc':
-            cars.sort((a, b) => a.daily_price - b.daily_price);
-            break;
-        case 'price_desc':
-            cars.sort((a, b) => b.daily_price - a.daily_price);
-            break;
-        default:
-            // Default sort (e.g., by model year or make) can be added here
-            break;
+      // FIX: Cast daily_price to Number to avoid type errors during arithmetic operation.
+      case 'price_asc': cars.sort((a, b) => Number(a.daily_price) - Number(b.daily_price)); break;
+      // FIX: Cast daily_price to Number to avoid type errors during arithmetic operation.
+      case 'price_desc': cars.sort((a, b) => Number(b.daily_price) - Number(a.daily_price)); break;
+      default: break;
     }
-
     return cars;
   }, [branchCars, categoryFilter, yearFilter, sortOrder]);
-
-
-  useEffect(() => {
-    const currentBranch = BRANCHES.find(b => b.id === branchId) || null;
-    setBranch(currentBranch);
-  }, [branchId]);
 
   const handleBook = (car: FullCarDetails) => {
     setSelectedCar(car);
     setBookingModalOpen(true);
   };
   
-  const handleConfirmBooking = (bookingData: Omit<Booking, 'id' | 'bookingNumber' | 'status'>) => {
-    addBooking(bookingData);
-    setBookingModalOpen(false);
-    setConfirmationOpen(true);
+  const handleSaveBooking = async (bookingData: Omit<Booking, 'id' | 'bookingNumber' | 'status' | 'createdAt'>) => {
+    const success = await addBooking(bookingData);
+    if (success) {
+        setBookingModalOpen(false);
+        setConfirmationOpen(true);
+    } else {
+        alert("فشل إنشاء الحجز. الرجاء المحاولة مرة أخرى.");
+    }
   }
   
+  if (isLoading) {
+    return <div>جاري تحميل السيارات...</div>;
+  }
+
   if (!branch) {
     return <div>الفرع غير موجود.</div>;
   }
@@ -136,9 +125,7 @@ const CarsPage: React.FC = () => {
         </Select>
          <Select id="yearFilter" label="تصفية حسب السنة" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
             <option value="all">كل السنوات</option>
-            {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-            ))}
+            {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
         </Select>
         <Select id="sortOrder" label="ترتيب حسب" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
             <option value="default">افتراضي</option>
@@ -148,15 +135,13 @@ const CarsPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {processedCars.map(car => (
-          <CarCard key={car.id} car={car} onBook={handleBook} />
-        ))}
+        {processedCars.map(car => <CarCard key={car.id} car={car} onBook={handleBook} />)}
         {processedCars.length === 0 && <p>لا توجد سيارات مطابقة لمعايير البحث.</p>}
       </div>
 
       {selectedCar && (
-        <Modal isOpen={isBookingModalOpen} onClose={() => setBookingModalOpen(false)} title={user ? `حجز ${selectedCar.make} ${selectedCar.model}` : "تسجيل الدخول للمتابعة"}>
-          <BookingForm car={selectedCar} onClose={() => setBookingModalOpen(false)} onConfirm={handleConfirmBooking} />
+        <Modal isOpen={isBookingModalOpen} onClose={() => setBookingModalOpen(false)} title={`حجز ${selectedCar.make} ${selectedCar.model}`}>
+          <BookingForm car={selectedCar} onClose={() => setBookingModalOpen(false)} onSave={handleSaveBooking} />
         </Modal>
       )}
 

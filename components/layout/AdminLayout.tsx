@@ -114,12 +114,12 @@ const AdminLayout: React.FC = () => {
     }, [user?.role]);
 
     const MobileBottomNav = () => (
-        <div className="fixed bottom-0 start-0 z-50 w-full h-16 bg-white border-t border-gray-200 shadow-t-lg md:hidden">
+        <div className="fixed bottom-0 start-0 z-50 w-full h-16 bg-white border-t border-gray-200 shadow-t-lg md:hidden dark:bg-gray-800 dark:border-gray-700">
             <div className={`grid h-full max-w-lg grid-cols-${navItems.length} mx-auto font-medium`}>
                 {navItems.map(item => {
                     if (item.type === 'button') {
                         return (
-                             <button key={item.label} type="button" onClick={() => setMoreMenuOpen(true)} className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 text-gray-500 hover:text-orange-600">
+                             <button key={item.label} type="button" onClick={() => setMoreMenuOpen(true)} className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500">
                                 {item.icon}
                                 <span className="text-xs">{item.label}</span>
                             </button>
@@ -127,7 +127,7 @@ const AdminLayout: React.FC = () => {
                     }
                     const isActive = item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path!);
                     return (
-                        <NavLink key={item.path} to={item.path!} end={item.exact} className={`inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 ${isActive ? 'text-orange-600' : 'text-gray-500 hover:text-orange-600'}`}>
+                        <NavLink key={item.path} to={item.path!} end={item.exact} className={`inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-700 ${isActive ? 'text-orange-600 dark:text-orange-500' : 'text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500'}`}>
                             {item.icon}
                             <span className="text-xs">{item.label}</span>
                         </NavLink>
@@ -138,7 +138,7 @@ const AdminLayout: React.FC = () => {
     );
     
     return (
-        <div className="flex h-screen">
+        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
             {/* Desktop Sidebar */}
             <aside className={`hidden md:flex flex-col w-64 bg-gray-800 text-white transform transition-all duration-300 ease-in-out md:w-${isSidebarCollapsed ? '20' : '64'}`}>
                 <button
@@ -179,7 +179,7 @@ const AdminLayout: React.FC = () => {
                              <Link to="/admin/reports" onClick={() => setMoreMenuOpen(false)}>
                                 <Button variant="secondary" className="w-full justify-start text-base">التقارير</Button>
                             </Link>
-                             <hr className="my-2"/>
+                             <hr className="my-2 dark:border-gray-700"/>
                         </>
                     )}
                     <Link to="/" onClick={() => setMoreMenuOpen(false)}>

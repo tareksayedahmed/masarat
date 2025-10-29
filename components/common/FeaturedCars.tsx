@@ -1,23 +1,41 @@
-
 import React, { useState, useEffect } from 'react';
-import { CAR_MODELS } from '../../constants';
-import Card from '../ui/Card';
+import { CarModel } from '../../types';
 import { Link } from 'react-router-dom';
+import api from '../../api';
 
 const FeaturedCars: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const featured = CAR_MODELS.filter(c => ['SUV', 'سيدان'].includes(c.category)).slice(0, 6);
+  const [featured, setFeatured] = useState<CarModel[]>([]);
 
   useEffect(() => {
+    const fetchFeatured = async () => {
+        try {
+            const res = await api.get('/data/carmodels');
+            const allModels: CarModel[] = res.data;
+            const featuredCars = allModels.filter(c => ['SUV', 'سيدان'].includes(c.category)).slice(0, 6);
+            setFeatured(featuredCars);
+        } catch (error) {
+            console.error("Failed to fetch featured cars:", error);
+        }
+    };
+    fetchFeatured();
+  }, []);
+
+  useEffect(() => {
+    if (featured.length === 0) return;
     const timer = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % featured.length);
-    }, 4000); // Change slide every 4 seconds
+    }, 4000);
     return () => clearInterval(timer);
-  }, [featured.length]);
+  }, [featured]);
 
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
   };
+
+  if (featured.length === 0) {
+      return <div className="text-center p-8">جاري تحميل السيارات المميزة...</div>
+  }
 
   return (
     <div className="relative w-full max-w-6xl mx-auto">

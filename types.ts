@@ -41,7 +41,7 @@ export interface CarModel {
 
 // Represents a physical car instance in the fleet
 export interface Car {
-  id: string;
+  id:string;
   modelKey: string; // Foreign key to CarModel
   branchId: string;
   license_plate: string;
@@ -61,6 +61,16 @@ export interface FullCarDetails extends Car {
     images: string[];
 }
 
+// FIX: Export BookingPriceBreakdown to be used in other components.
+export interface BookingPriceBreakdown {
+  base: number;
+  insurance: number;
+  extras: number;
+  delivery: number;
+  tax: number;
+  total: number;
+}
+
 export interface Booking {
   id: string;
   bookingNumber: string;
@@ -77,14 +87,7 @@ export interface Booking {
     child_seat: boolean;
     internationalPermit: boolean;
   };
-  priceBreakdown: {
-    base: number;
-    insurance: number;
-    extras: number;
-    delivery: number;
-    tax: number;
-    total: number;
-  };
+  priceBreakdown: BookingPriceBreakdown;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   documents: {
     license?: string | null;
@@ -103,6 +106,8 @@ export interface Booking {
       lat: number;
       lng: number;
   };
+  paymentMethod: 'cash' | 'card' | 'stc_pay' | 'apple_pay';
+  createdAt: string; // ISO string timestamp of when the booking was created
 }
 
 export interface AuditLog {

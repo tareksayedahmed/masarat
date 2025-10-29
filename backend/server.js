@@ -10,22 +10,13 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// API Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/data', require('./routes/data'));
+app.use('/api/bookings', require('./routes/bookings'));
 
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Test API is working!' });
-});
 
 app.get('/', (req, res) => res.json({ message: "Welcome to Masarat API" }));
-
-app.get('/test-db', async (req, res) => {
-  try {
-    const dbStatus = await connectDB();
-    res.json(dbStatus);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to connect to MongoDB", error: error.message });
-  }
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

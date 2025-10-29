@@ -10,7 +10,7 @@ interface CardProps {
 const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => {
   return (
     <div 
-      className={`bg-white/60 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:ring-2 hover:ring-orange-500/50 ${className}`} 
+      className={`bg-white/60 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:ring-2 hover:ring-orange-500/50 dark:bg-gray-900/60 dark:border-gray-700/50 dark:hover:ring-orange-500/30 ${className}`} 
       onClick={onClick}
     >
       {children}

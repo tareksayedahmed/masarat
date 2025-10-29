@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -61,18 +60,18 @@ const AdminSettingsPage: React.FC = () => {
 
     return (
         <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">الإعدادات</h1>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">الإعدادات</h1>
             
-            <Card className="p-6">
-                <h2 className="text-2xl font-bold mb-1">إشعارات البريد الإلكتروني</h2>
-                <p className="text-gray-500 mb-6">تحكم في رسائل البريد الإلكتروني التلقائية المرسلة من النظام.</p>
+            <Card className="p-6 bg-white dark:bg-gray-800">
+                <h2 className="text-2xl font-bold mb-1 text-gray-900 dark:text-gray-100">إشعارات البريد الإلكتروني</h2>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">تحكم في رسائل البريد الإلكتروني التلقائية المرسلة من النظام.</p>
 
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {settings.map(setting => (
                         <div key={setting.id} className="flex items-center justify-between py-4">
                             <div>
-                                <p className="font-medium text-gray-800">{setting.label}</p>
-                                <p className="text-sm text-gray-500">{setting.description}</p>
+                                <p className="font-medium text-gray-800 dark:text-gray-200">{setting.label}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{setting.description}</p>
                             </div>
                             <ToggleSwitch
                                 id={setting.id}
@@ -83,7 +82,7 @@ const AdminSettingsPage: React.FC = () => {
                     ))}
                 </div>
                 
-                <div className="mt-6 pt-6 border-t border-gray-200 flex justify-end">
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
                     <Button onClick={handleSaveChanges} disabled={isSaving}>
                         {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                     </Button>

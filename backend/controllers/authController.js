@@ -20,7 +20,6 @@ exports.registerUser = async (req, res) => {
 
     await user.save();
     
-    // Create JWT
     const payload = { user: { id: user.id, role: user.role } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
         if (err) throw err;
@@ -37,19 +36,15 @@ exports.registerUser = async (req, res) => {
 // @route   POST /api/auth/login
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
-
     try {
         let user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
-
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
-        
-        // Create JWT
         const payload = { user: { id: user.id, role: user.role } };
         jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
             if (err) throw err;
@@ -58,5 +53,18 @@ exports.loginUser = async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
+    }
+};
+
+// @desc    Get logged in user
+// @route   GET /api/auth/me
+exports.getMe = async (req, res) => {
+    try {
+        // req.user is attached from auth middleware
+        const user = await User.findById(req.user.id).select('-password');
+        res.json(user);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 };

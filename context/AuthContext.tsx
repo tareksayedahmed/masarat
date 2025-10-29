@@ -1,10 +1,11 @@
-
-import React, { createContext, useState, useContext, PropsWithChildren } from 'react';
-import axios from 'axios';
-import { User, UserRole } from '../types';
+import React, { createContext, useState, useContext, PropsWithChildren, useEffect } from 'react';
+import { User } from '../types';
+import api from '../api';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
+  isLoading: boolean;
   login: (email: string, password?: string) => Promise<boolean>;
   register: (name: string, email: string, password?: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
@@ -17,88 +18,88 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = 'http://localhost:5000/api/auth';
-
 export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+        try {
+          const res = await api.get('/auth/me');
+          setUser(res.data);
+        } catch (error) {
+          console.error("Failed to load user", error);
+          // Token is invalid, remove it
+          localStorage.removeItem('token');
+          setToken(null);
+          setUser(null);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadUser();
+  }, []);
+
+  const setAuthData = (data: { token: string; user: User }) => {
+    localStorage.setItem('token', data.token);
+    setToken(data.token);
+    setUser(data.user);
+    closeLoginModal();
+  };
 
   const login = async (email: string, password?: string): Promise<boolean> => {
     try {
-        const response = await axios.post(`${API_URL}/login`, { email, password });
-        if (response.data.user) {
-            setUser(response.data.user);
-            // You might want to store the token for authenticated requests
-            // localStorage.setItem('token', response.data.token);
-            // axios.defaults.headers.common['x-auth-token'] = response.data.token;
-            closeLoginModal();
-            return true;
-        }
-        return false;
+      const res = await api.post('/auth/login', { email, password });
+      setAuthData(res.data);
+      return true;
     } catch (error) {
-        console.error('Login failed:', error);
-        return false;
+      console.error("Login failed", error);
+      return false;
     }
   };
 
   const register = async (name: string, email: string, password?: string): Promise<boolean> => {
-     try {
-        const response = await axios.post(`${API_URL}/register`, { name, email, password });
-        if (response.data.user) {
-            setUser(response.data.user);
-            // localStorage.setItem('token', response.data.token);
-            // axios.defaults.headers.common['x-auth-token'] = response.data.token;
-            closeLoginModal();
-            return true;
-        }
-        return false;
+    try {
+      const res = await api.post('/auth/register', { name, email, password });
+      setAuthData(res.data);
+      return true;
     } catch (error) {
-        console.error('Registration failed:', error);
-        return false;
+      console.error("Registration failed", error);
+      return false;
     }
   }
 
   const forgotPassword = async (email: string): Promise<boolean> => {
-    // This is a mock implementation.
     console.log(`Password reset requested for: ${email}`);
+    // This would be a backend call in a real app
     await new Promise(resolve => setTimeout(resolve, 1000));
-    // Always return true in the demo to show the success message
     return true;
   };
 
   const loginWithProvider = async (provider: 'google' | 'facebook'): Promise<boolean> => {
-    try {
-        console.log(`Simulating login with ${provider}`);
-        // This is a mock implementation as OAuth is not set up.
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
-
-        const mockUser: User = provider === 'google' 
-            ? { id: 'user-google-mock', name: 'مستخدم جوجل', email: 'google.user@example.com', role: UserRole.Customer }
-            : { id: 'user-facebook-mock', name: 'مستخدم فيسبوك', email: 'facebook.user@example.com', role: UserRole.Customer };
-        
-        setUser(mockUser);
-        closeLoginModal();
-        return true;
-
-    } catch (error) {
-        console.error(`Social login with ${provider} failed:`, error);
-        return false;
-    }
+    // This would involve a complex OAuth flow with the backend
+    console.log(`Social login with ${provider} is not implemented in the backend yet.`);
+    return false;
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
     setUser(null);
-    // localStorage.removeItem('token');
-    // delete axios.defaults.headers.common['x-auth-token'];
   };
 
   const openLoginModal = () => setLoginModalOpen(true);
   const closeLoginModal = () => setLoginModalOpen(false);
 
-
   return (
-    <AuthContext.Provider value={{ user, login, register, forgotPassword, loginWithProvider, logout, isLoginModalOpen, openLoginModal, closeLoginModal }}>
-      {children}
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, forgotPassword, loginWithProvider, logout, isLoginModalOpen, openLoginModal, closeLoginModal }}>
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
