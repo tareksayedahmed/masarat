@@ -1,7 +1,6 @@
 import React from 'react';
 import { AuditLog } from '../../types';
 
-// FIX: Removed import from empty constants.ts file and defined mock data locally.
 const AUDIT_LOGS: AuditLog[] = [
     { id: '1', user: 'admin@masarat.com', action: 'تحديث الحجز', timestamp: '2024-07-20T10:00:00Z', details: 'تم تغيير حالة الحجز #MAS-12345 إلى "مؤكد".' },
     { id: '2', user: 'operator@masarat.com', action: 'إضافة سيارة', timestamp: '2024-07-20T09:30:00Z', details: 'تم إضافة سيارة جديدة: هيونداي النترا 2024.' },

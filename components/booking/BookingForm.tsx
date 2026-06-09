@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import AuthForm from '../auth/AuthForm';
 import { useBookings } from '../../context/BookingContext';
 import api from '../../api';
+import Checkbox from '../ui/Checkbox';
+import RadioGroup from '../ui/RadioGroup';
 
 interface BookingFormProps {
   car: FullCarDetails;
@@ -44,11 +46,19 @@ const getInitialDateTime = () => {
     return { startDate: start.dateStr, startTime: start.timeStr, endDate: end.dateStr, endTime: end.timeStr };
 };
 
+const STEPS = [
+    { id: 1, name: 'التاريخ والوقت' },
+    { id: 2, name: 'الإضافات' },
+    { id: 3, name: 'الاستلام والتسليم' },
+    { id: 4, name: 'البيانات والمستندات' },
+    { id: 5, name: 'الدفع والمراجعة' }
+];
+
 const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existingBooking = null }) => {
   const { user } = useAuth();
   const { calculatePrice } = useBookings();
-  const [mainStep, setMainStep] = useState(existingBooking ? 4 : 1);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'stc_pay' | 'apple_pay'>(existingBooking?.paymentMethod || 'cash');
+  const [mainStep, setMainStep] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'stc_pay' | 'apple_pay'>(existingBooking?.paymentMethod || 'card');
 
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -111,7 +121,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existin
         setOptions({ insurance: false, extra_driver: false, open_km: false, child_seat: false, internationalPermit: false });
         setDocuments({ license: null, id_card: null, licenseExpiry: '' });
         setContact({ phone1: '', phone2: '', address: '' });
-        setDeliveryOption('branch'); setPaymentMethod('cash'); setDeliveryLocation(null);
+        setDeliveryOption('branch'); setPaymentMethod('card'); setDeliveryLocation(null);
     }
   }, [existingBooking]);
 
@@ -151,7 +161,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existin
   }, [updatePrice]);
 
   useEffect(() => {
-    if (mainStep === 5 && deliveryOption !== 'branch' && mapContainerRef.current && branchData?.lat && branchData.lng) {
+    if (mainStep === 3 && deliveryOption !== 'branch' && mapContainerRef.current && branchData?.lat && branchData.lng) {
         if (!mapRef.current) {
             const map = L.map(mapContainerRef.current).setView([branchData.lat, branchData.lng], 13);
             mapRef.current = map;
@@ -196,23 +206,34 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existin
   const handleDocsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setDocuments({ ...documents, [e.target.name]: e.target.value });
   const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) => setContact({ ...contact, [e.target.name]: e.target.value });
 
-  const validateStep1 = () => { /* ... validation ... */ return true; };
-  const validateStep2 = () => { /* ... validation ... */ return true; };
-  const validateStep3 = () => { /* ... validation ... */ return true; };
+  const validateStep = () => {
+    setErrors({});
+    let isValid = true;
+    if (mainStep === 1 && !!dateError) {
+        setDateError('الرجاء إدخال تواريخ صحيحة.');
+        isValid = false;
+    }
+    if (mainStep === 3 && deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)) {
+        setDeliveryError(deliveryError || 'الرجاء تحديد موقع التوصيل.');
+        isValid = false;
+    }
+    if (mainStep === 4) {
+        if (!documents.licenseExpiry) { setErrors(prev => ({ ...prev, licenseExpiry: 'تاريخ انتهاء الرخصة مطلوب' })); isValid = false; }
+        if (!contact.phone1) { setErrors(prev => ({ ...prev, phone1: 'رقم الجوال الأساسي مطلوب' })); isValid = false; }
+        if (!contact.address) { setErrors(prev => ({ ...prev, address: 'العنوان مطلوب' })); isValid = false; }
+    }
+    return isValid;
+  };
 
   const handleNext = () => {
-    setErrors({});
-    if (mainStep === 1 && !validateStep1()) return;
-    if (mainStep === 2 && !validateStep2()) return;
-    if (mainStep === 3 && !validateStep3()) return;
-    if (mainStep === 4 && (!!dateError)) { setDateError('الرجاء إدخال تواريخ صحيحة.'); return; }
-    if (mainStep === 5 && deliveryOption !== 'branch' && (!deliveryLocation || !!deliveryError)) { setDeliveryError(deliveryError || 'الرجاء تحديد موقع التوصيل.'); return; }
-    setMainStep(s => Math.min(s + 1, existingBooking ? 7 : 8));
+    if (validateStep()) {
+        setMainStep(s => Math.min(s + 1, STEPS.length));
+    }
   };
   const handlePrev = () => setMainStep(s => Math.max(s - 1, 1));
 
   const handleSaveClick = () => {
-    if (!user || !priceBreakdown) return;
+    if (!user || !priceBreakdown || !validateStep()) return;
     const bookingData = {
         carId: car.id, userId: user.id, branchId: car.branchId,
         startDate: new Date(`${startDate}T${startTime}`).toISOString(),
@@ -223,12 +244,124 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existin
     onSave(bookingData, existingBooking?.id);
   };
 
-  const Stepper = () => { /* ... UI ... */ return <nav>...</nav>; };
+  const Stepper = () => (
+    <nav aria-label="Progress">
+      <ol role="list" className="flex items-center">
+        {STEPS.map((step, stepIdx) => (
+          <li key={step.name} className={`relative ${stepIdx !== STEPS.length - 1 ? 'flex-1' : ''}`}>
+            {step.id < mainStep ? (
+              <>
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="h-0.5 w-full bg-orange-600" />
+                </div>
+                <button
+                  onClick={() => setMainStep(step.id)}
+                  className="relative flex h-8 w-8 items-center justify-center rounded-full bg-orange-600 hover:bg-orange-900"
+                >
+                  <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clipRule="evenodd" />
+                  </svg>
+                  <span className="sr-only">{step.name}</span>
+                </button>
+              </>
+            ) : step.id === mainStep ? (
+              <>
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="h-0.5 w-full bg-gray-200 dark:bg-gray-700" />
+                </div>
+                <div className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-orange-600 bg-white dark:bg-gray-800" aria-current="step">
+                  <span className="h-2.5 w-2.5 rounded-full bg-orange-600" aria-hidden="true" />
+                  <span className="sr-only">{step.name}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="h-0.5 w-full bg-gray-200 dark:bg-gray-700" />
+                </div>
+                <div className="group relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 bg-white hover:border-gray-400 dark:bg-gray-800 dark:border-gray-600">
+                  <span className="h-2.5 w-2.5 rounded-full bg-transparent" aria-hidden="true" />
+                  <span className="sr-only">{step.name}</span>
+                </div>
+              </>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
 
   const renderMainStepContent = () => {
-    // Return JSX for each step based on mainStep
-    // Omitted for brevity, but it's the switch statement from the original component
-    return <div>Step {mainStep} Content</div>;
+    switch (mainStep) {
+        case 1: // Dates
+            return (
+                <div className="space-y-4">
+                    <h3 className="text-xl font-bold">اختر مدة الإيجار</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input label="تاريخ الاستلام" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                        <Select label="وقت الاستلام" value={startTime} onChange={e => setStartTime(e.target.value)}>{timeOptions.map(t => <option key={t} value={t}>{t}</option>)}</Select>
+                        <Input label="تاريخ التسليم" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate} />
+                        <Select label="وقت التسليم" value={endTime} onChange={e => setEndTime(e.target.value)}>{timeOptions.map(t => <option key={t} value={t}>{t}</option>)}</Select>
+                    </div>
+                    {dateError && <p className="text-red-500 text-sm">{dateError}</p>}
+                </div>
+            );
+        case 2: // Options
+            return (
+                <div className="space-y-4">
+                    <h3 className="text-xl font-bold">اختر الإضافات</h3>
+                    <Checkbox id="insurance" name="insurance" label="تأمين شامل" description="تغطية كاملة ضد الحوادث والسرقة (50 ريال/يوم)." checked={options.insurance} onChange={handleOptionChange} />
+                    <Checkbox id="extra_driver" name="extra_driver" label="سائق إضافي" description="إضافة سائق آخر على العقد (50 ريال)." checked={options.extra_driver} onChange={handleOptionChange} />
+                    <Checkbox id="child_seat" name="child_seat" label="كرسي أطفال" description="مقعد آمن للأطفال (30 ريال)." checked={options.child_seat} onChange={handleOptionChange} />
+                    <Checkbox id="internationalPermit" name="internationalPermit" label="تصريح سفر دولي" description="تصريح للسفر خارج المملكة (100 ريال)." checked={options.internationalPermit} onChange={handleOptionChange} />
+                </div>
+            );
+        case 3: // Delivery
+            return (
+                <div className="space-y-4">
+                     <h3 className="text-xl font-bold">اختر طريقة الاستلام والتسليم</h3>
+                    <RadioGroup name="deliveryOption" selectedValue={deliveryOption} onChange={(val) => setDeliveryOption(val as any)} options={[
+                        { value: 'branch', label: 'استلام وتسليم من الفرع', description: 'بدون رسوم إضافية.' },
+                        { value: 'delivery', label: 'توصيل السيارة فقط', description: 'سيتم احتساب رسوم توصيل.' },
+                        { value: 'delivery_pickup', label: 'توصيل واستلام السيارة', description: 'سيتم احتساب رسوم للتوصيل والاستلام.' },
+                    ]}/>
+                    {deliveryOption !== 'branch' && (
+                        <div className="mt-4">
+                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">الرجاء تحديد موقع {deliveryOption === 'delivery' ? 'التوصيل' : 'التوصيل والاستلام'} على الخريطة. (نطاق الخدمة 40 كم من الفرع)</p>
+                            <div ref={mapContainerRef} className="h-64 w-full rounded-lg bg-gray-200 dark:bg-gray-700 z-0"></div>
+                            {deliveryError && <p className="text-red-500 text-sm mt-2">{deliveryError}</p>}
+                        </div>
+                    )}
+                </div>
+            )
+        case 4: // Documents & Contact
+             return (
+                <div className="space-y-4">
+                     <h3 className="text-xl font-bold">بيانات التواصل والمستندات</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input label="رقم الجوال الأساسي" name="phone1" value={contact.phone1} onChange={handleContactChange} required error={errors.phone1} />
+                        <Input label="رقم جوال إضافي" name="phone2" value={contact.phone2} onChange={handleContactChange} />
+                    </div>
+                    <Input label="العنوان" name="address" value={contact.address} onChange={handleContactChange} required error={errors.address} />
+                    <hr className="dark:border-gray-700"/>
+                    <Input label="تاريخ انتهاء الرخصة" name="licenseExpiry" type="date" value={documents.licenseExpiry} onChange={handleDocsInputChange} required error={errors.licenseExpiry} />
+                    <p className="text-xs text-gray-500">سيتم طلب صور المستندات (الرخصة، الهوية) عند تأكيد الحجز.</p>
+                </div>
+            );
+        case 5: // Payment & Review
+            return (
+                <div className="space-y-4">
+                    <h3 className="text-xl font-bold">اختر طريقة الدفع</h3>
+                    <RadioGroup name="paymentMethod" selectedValue={paymentMethod} onChange={(val) => setPaymentMethod(val as any)} options={[
+                        { value: 'card', label: 'بطاقة ائتمانية / مدى'},
+                        { value: 'apple_pay', label: 'Apple Pay' },
+                        { value: 'stc_pay', label: 'STC Pay' },
+                        { value: 'cash', label: 'الدفع نقداً في الفرع' },
+                    ]}/>
+                </div>
+            );
+        default: return null;
+    }
   };
 
   if (!user) return <AuthForm onSuccess={() => {}} />;
@@ -260,8 +393,15 @@ const BookingForm: React.FC<BookingFormProps> = ({ car, onClose, onSave, existin
         </div>
       </div>
       <div className="lg:col-span-3">
-        <div className="mb-12"> <Stepper /> </div>
-        <div> {renderMainStepContent()} </div>
+        <div className="mb-8"> <Stepper /> </div>
+        <div className="p-6 border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[300px]"> 
+            {renderMainStepContent()} 
+        </div>
+        <div className="mt-6 flex justify-between">
+            {mainStep > 1 && <Button variant="secondary" onClick={handlePrev}>السابق</Button>}
+            {mainStep < STEPS.length && <Button onClick={handleNext}>التالي</Button>}
+            {mainStep === STEPS.length && <Button onClick={handleSaveClick} disabled={!priceBreakdown || isCalculating}>{existingBooking ? 'حفظ التعديلات' : 'تأكيد الحجز'}</Button>}
+        </div>
       </div>
     </div>
   );

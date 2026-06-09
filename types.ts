@@ -61,7 +61,6 @@ export interface FullCarDetails extends Car {
     images: string[];
 }
 
-// FIX: Export BookingPriceBreakdown to be used in other components.
 export interface BookingPriceBreakdown {
   base: number;
   insurance: number;

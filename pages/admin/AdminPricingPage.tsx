@@ -46,6 +46,11 @@ const AdminPricingPage: React.FC = () => {
         setIsModalOpen(true);
     };
 
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedModel(null);
+    }
+
     const handleSaveModel = async (modelToSave: CarModel) => {
         try {
             if (selectedModel) {
@@ -54,28 +59,82 @@ const AdminPricingPage: React.FC = () => {
                 await api.post('/carmodels', modelToSave);
             }
             fetchModels();
-            setIsModalOpen(false);
-            setSelectedModel(null);
+            handleCloseModal();
         } catch (error) {
             console.error("Failed to save car model:", error);
             alert("فشل حفظ الطراز.");
         }
     };
     
-    // handlePriceChange, resetFilters, etc.
+    const handleResetFilters = () => {
+        setSearchQuery('');
+        setCategoryFilter('all');
+    };
     
     if (loading) return <div>جاري تحميل الطرازات...</div>;
 
     return (
-        <div>
-            {/* Page content with filters and mapping over `filteredModels` */}
-             <CarModelFormModal
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">إدارة الأسعار والطرازات</h1>
+                <Button onClick={() => handleOpenModal()}>إضافة طراز جديد</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input placeholder="ابحث بالشركة المصنعة أو الموديل..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                <Select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                    <option value="all">كل الفئات</option>
+                    <option value="اقتصادية">اقتصادية</option>
+                    <option value="سيدان">سيدان</option>
+                    <option value="SUV">SUV</option>
+                    <option value="شاحنة">شاحنة</option>
+                </Select>
+                <Button variant="secondary" onClick={handleResetFilters}>إعادة تعيين الفلاتر</Button>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        <tr className="text-right font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm">
+                            <th className="px-4 py-3">الطراز</th>
+                            <th className="px-4 py-3">الفئة</th>
+                            <th className="px-4 py-3">السعر اليومي</th>
+                            <th className="px-4 py-3">السعر الأسبوعي</th>
+                            <th className="px-4 py-3">السعر الشهري</th>
+                            <th className="px-4 py-3">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y dark:divide-gray-700">
+                        {filteredModels.map(model => (
+                            <tr key={model.key} className="text-gray-700 dark:text-gray-300">
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center text-sm">
+                                        <div className="relative hidden w-12 h-12 mr-3 rounded-full md:block flex-shrink-0">
+                                            <img className="object-cover w-full h-full rounded-md" src={model.images[0]} alt="" loading="lazy" />
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold">{model.make} {model.model}</p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">{model.year}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm">{model.category}</td>
+                                <td className="px-4 py-3 text-sm font-semibold">{model.daily_price} ريال</td>
+                                <td className="px-4 py-3 text-sm">{model.weekly_price} ريال</td>
+                                <td className="px-4 py-3 text-sm">{model.monthly_price} ريال</td>
+                                <td className="px-4 py-3"><Button size="sm" onClick={() => handleOpenModal(model)}>تعديل</Button></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            
+            <CarModelFormModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={handleCloseModal}
                 onSave={handleSaveModel}
                 model={selectedModel}
             />
-            {/* ... other modals */}
         </div>
     );
 };

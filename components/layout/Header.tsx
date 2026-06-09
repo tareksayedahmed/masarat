@@ -39,7 +39,6 @@ const Header: React.FC = () => {
       }
       acc[region].push(branch);
       return acc;
-      // FIX: Add type to the initial value of reduce to ensure correct type inference.
     }, {} as Record<string, Branch[]>);
   }, [branches]);
 
@@ -82,8 +81,8 @@ const Header: React.FC = () => {
         </button>
         {isBranchesMenuOpen && (
           <div className={`absolute mt-2 w-max min-w-[400px] max-h-[70vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 p-4 grid grid-cols-2 gap-4 ${language === 'ar' ? 'start-0' : 'left-0'}`}>
-            {/* FIX: Correctly typed branchesByRegion allows .map to be called. */}
-            {Object.entries(branchesByRegion).map(([region, regionBranches]) => (
+            {/* FIX: Explicitly type the destructured parameters from Object.entries to resolve 'unknown' type error. */}
+            {Object.entries(branchesByRegion).map(([region, regionBranches]: [string, Branch[]]) => (
               <div key={region}>
                 <h3 className="font-bold text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-1 mb-2">{region}</h3>
                 <ul className="space-y-1">
@@ -121,8 +120,8 @@ const Header: React.FC = () => {
         </button>
         {isBranchesMenuOpen && (
           <div className="ps-4 mt-2 space-y-2 border-s-2 border-orange-100 dark:border-orange-900">
-            {/* FIX: Correctly typed branchesByRegion allows .map to be called. */}
-            {Object.entries(branchesByRegion).map(([region, regionBranches]) => (
+            {/* FIX: Explicitly type the destructured parameters from Object.entries to resolve 'unknown' type error. */}
+            {Object.entries(branchesByRegion).map(([region, regionBranches]: [string, Branch[]]) => (
               <div key={region}>
                 <h3 className="font-semibold text-gray-500 dark:text-gray-400 text-sm ps-2">{region}</h3>
                 <ul className="space-y-1 mt-1">

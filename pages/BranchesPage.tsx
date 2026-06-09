@@ -117,12 +117,12 @@ const BranchesPage: React.FC = () => {
           <section aria-labelledby="branch-list-heading" className="w-full lg:w-1/3 h-full overflow-y-auto">
               {isLoading ? <p>جاري تحميل الفروع...</p> : (
                 <div className="space-y-8">
-                  {Object.entries(branchesByRegion).map(([region, regionBranches]) => (
+                  {/* FIX: Explicitly type the destructured parameters from Object.entries to resolve 'unknown' type error for regionBranches. */}
+                  {Object.entries(branchesByRegion).map(([region, regionBranches]: [string, Branch[]]) => (
                   <div key={region}>
                       <h3 className="text-2xl font-bold mb-4 border-b-2 border-orange-500 pb-2 sticky top-0 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm z-10 text-gray-900 dark:text-gray-100">{region}</h3>
                       <div className="space-y-4">
-                      {/* FIX: Cast regionBranches to Branch[] to fix type error with .map */}
-                      {(regionBranches as Branch[]).map(branch => {
+                      {regionBranches.map(branch => {
                           const isSelected = branch.id === selectedBranchId;
                           return (
                               <div key={branch.id} ref={el => { branchRefs.current[branch.id] = el; }}>

@@ -5,8 +5,8 @@ const {
     calculatePrice, 
     createBooking, 
     getBookings,
-    // updateBooking,
-    // getAllBookings
+    updateBooking,
+    getAllBookings
 } = require('../controllers/bookingController');
 
 // @route   POST api/bookings/calculate-price
@@ -25,7 +25,7 @@ router.post('/', auth, createBooking);
 router.get('/', auth, getBookings);
 
 // Add routes for admin to get all bookings, and for updating a booking
-// router.get('/all', auth, adminCheck, getAllBookings);
-// router.put('/:id', auth, updateBooking);
+router.get('/all', auth, getAllBookings);
+router.put('/:id', auth, updateBooking);
 
 module.exports = router;

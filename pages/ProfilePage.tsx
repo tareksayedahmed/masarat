@@ -108,8 +108,23 @@ const ProfilePage: React.FC = () => {
     return <p className="text-gray-800 dark:text-gray-200">الرجاء تسجيل الدخول لعرض صفحتك الشخصية.</p>;
   }
 
-  const getStatusChip = (status: Booking['status']) => { /* ... */ };
-  const formatDateTime = (isoString: string) => { /* ... */ };
+  const getStatusChip = (status: Booking['status']) => {
+    const baseClasses = "px-3 py-1 text-xs font-semibold leading-tight rounded-full";
+    const statusMap = {
+        pending: `bg-yellow-100 text-yellow-700 dark:bg-yellow-700/20 dark:text-yellow-300`,
+        confirmed: `bg-blue-100 text-blue-700 dark:bg-blue-700/20 dark:text-blue-300`,
+        active: `bg-green-100 text-green-700 dark:bg-green-700/20 dark:text-green-300`,
+        completed: `bg-gray-100 text-gray-700 dark:bg-gray-700/20 dark:text-gray-300`,
+        cancelled: `bg-red-100 text-red-700 dark:bg-red-700/20 dark:text-red-300`
+    };
+    return <span className={`${baseClasses} ${statusMap[status]}`}>{t(`status_${status}`)}</span>;
+  };
+
+  const formatDateTime = (isoString: string) => {
+    return new Date(isoString).toLocaleString('ar-SA', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+  };
 
   const tabButtonClasses = (tabName: string) => 
     `px-6 py-3 font-semibold text-lg border-b-4 transition-colors ${
@@ -138,16 +153,33 @@ const ProfilePage: React.FC = () => {
                  const isActionable = booking.status === 'pending' && Date.now() < expiryTime;
 
                 return (
-                <Card key={booking.id} className="p-4 md:p-6 flex flex-col gap-4 bg-white dark:bg-gray-800">
-                  {/* Card Content */}
-                  {booking.carDetails && (
-                    <div className="flex flex-col md:flex-row gap-4 items-center">
-                        <img src={booking.carDetails.images[0]} alt={booking.carDetails.model} className="w-full md:w-48 h-48 md:h-auto object-cover rounded-lg" />
-                        {/* other details */}
+                <Card key={booking.id} className="p-0 flex flex-col bg-white dark:bg-gray-800">
+                  <div className="p-4 md:p-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+                        <div>
+                            <p className="font-bold text-lg text-gray-800 dark:text-gray-100">رقم الحجز: <span className="font-mono">{booking.bookingNumber}</span></p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">تاريخ الطلب: {formatDateTime(booking.createdAt)}</p>
+                        </div>
+                        {getStatusChip(booking.status)}
                     </div>
-                  )}
+
+                    {booking.carDetails && (
+                        <div className="flex flex-col md:flex-row gap-6 items-center">
+                            <img src={booking.carDetails.images[0]} alt={booking.carDetails.model} className="w-full md:w-48 h-48 md:h-auto object-cover rounded-lg flex-shrink-0" />
+                            <div className="w-full">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{booking.carDetails.make} {booking.carDetails.model} ({booking.carDetails.year})</h3>
+                                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                                    <div className="text-gray-600 dark:text-gray-300"><span className="font-semibold">{t('from')}:</span> {formatDateTime(booking.startDate)}</div>
+                                    <div className="text-gray-600 dark:text-gray-300"><span className="font-semibold">{t('to')}:</span> {formatDateTime(booking.endDate)}</div>
+                                    <div className="text-gray-600 dark:text-gray-300"><span className="font-semibold">{t('total')}:</span> <span className="font-bold text-orange-600">{booking.priceBreakdown.total.toFixed(2)} ريال</span></div>
+                                    <div className="text-gray-600 dark:text-gray-300"><span className="font-semibold">المدة:</span> {booking.days} أيام</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                  </div>
                   {isActionable && (
-                    <div className="bg-orange-50 dark:bg-orange-900/20 border-t-2 border-orange-200 dark:border-orange-800/50 p-3 rounded-b-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border-t border-orange-200 dark:border-orange-800/50 p-3 rounded-b-lg flex flex-col sm:flex-row justify-between items-center gap-4">
                         <CountdownTimer expiryTimestamp={expiryTime} onExpire={() => setRenderTrigger(Date.now())} />
                         <div className="flex items-center gap-2">
                           <Button variant="danger" size="sm" onClick={() => setBookingToCancel(booking)}>{t('cancel_booking')}</Button>
@@ -163,8 +195,54 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       )}
+      
+       {activeTab === 'info' && (
+        <Card className="p-6 bg-white dark:bg-gray-800 max-w-lg mx-auto">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">{t('personal_info')}</h2>
+            <div className="space-y-3">
+                <div><span className="font-semibold">{t('name')}:</span> {user.name}</div>
+                <div><span className="font-semibold">{t('email')}:</span> {user.email}</div>
+            </div>
+        </Card>
+       )}
 
-      {/* Other tabs and modals */}
+       {activeTab === 'settings' && (
+         <Card className="p-6 bg-white dark:bg-gray-800 max-w-lg mx-auto">
+             <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">{t('app_settings')}</h2>
+             <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="font-medium">{t('dark_mode')}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('dark_mode_desc')}</p>
+                    </div>
+                    <ToggleSwitch checked={theme === 'dark'} onChange={() => toggleTheme()} id="theme-toggle" />
+                </div>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="font-medium">{t('language')}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('language_desc')}</p>
+                    </div>
+                    <div className="w-32">
+                        <Select value={language} onChange={(e) => setLanguage(e.target.value as 'ar' | 'en')} id="language-select">
+                            <option value="ar">{t('arabic')}</option>
+                            <option value="en">{t('english')}</option>
+                        </Select>
+                    </div>
+                </div>
+             </div>
+         </Card>
+       )}
+
+      {bookingToCancel && (
+        <Modal isOpen={!!bookingToCancel} onClose={() => setBookingToCancel(null)} title="تأكيد الإلغاء">
+            <p>هل أنت متأكد من رغبتك في إلغاء الحجز رقم <span className="font-mono">{bookingToCancel.bookingNumber}</span>؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <div className="flex justify-end gap-4 mt-6">
+                <Button variant="secondary" onClick={() => setBookingToCancel(null)}>تراجع</Button>
+                <Button variant="danger" onClick={handleConfirmCancel}>نعم، قم بالإلغاء</Button>
+            </div>
+        </Modal>
+      )}
+
        {bookingToEdit && bookingToEdit.carDetails && (
         <Modal
             isOpen={!!bookingToEdit}

@@ -72,10 +72,10 @@ const CarsPage: React.FC = () => {
     if (categoryFilter !== 'all') cars = cars.filter(car => car.category === categoryFilter);
     if (yearFilter !== 'all') cars = cars.filter(car => car.year.toString() === yearFilter);
     switch (sortOrder) {
-      // FIX: Cast daily_price to Number to avoid type errors during arithmetic operation.
-      case 'price_asc': cars.sort((a, b) => Number(a.daily_price) - Number(b.daily_price)); break;
-      // FIX: Cast daily_price to Number to avoid type errors during arithmetic operation.
-      case 'price_desc': cars.sort((a, b) => Number(b.daily_price) - Number(a.daily_price)); break;
+      // FIX: daily_price is a number, so direct subtraction is safe and correct for sorting. Removed redundant Number() conversion.
+      case 'price_asc': cars.sort((a, b) => a.daily_price - b.daily_price); break;
+      // FIX: daily_price is a number, so direct subtraction is safe and correct for sorting. Removed redundant Number() conversion.
+      case 'price_desc': cars.sort((a, b) => b.daily_price - a.daily_price); break;
       default: break;
     }
     return cars;

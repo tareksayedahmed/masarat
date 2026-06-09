@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 const { CAR_MODELS, CARS, BRANCHES } = require('../constants');
 const { getDistance } = require('geolib');
 
@@ -67,12 +68,15 @@ exports.createBooking = async (req, res) => {
         const newBooking = new Booking({
             ...bookingData,
             userId: req.user.id,
-            bookingNumber: `MAS-${Math.floor(Math.random() * 90000) + 10000}`,
+            bookingNumber: `MAS-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`,
         });
         const savedBooking = await newBooking.save();
         res.status(201).json(savedBooking);
     } catch (err) {
         console.error(err.message);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ msg: 'Validation Error', errors: err.errors });
+        }
         res.status(500).send('Server Error');
     }
 };
@@ -88,4 +92,54 @@ exports.getBookings = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
-// ... other controllers like updateBooking, getAllBookings (for admin)
+
+// @desc    Get all bookings (for admins)
+// @route   GET /api/bookings/all
+exports.getAllBookings = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!['HeadAdmin', 'BranchAdmin', 'Operator'].includes(user.role)) {
+            return res.status(403).json({ msg: 'Access denied.' });
+        }
+        
+        const bookings = await Booking.find().sort({ createdAt: -1 });
+        res.json(bookings);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Update a booking
+// @route   PUT /api/bookings/:id
+exports.updateBooking = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) {
+            return res.status(404).json({ msg: 'Booking not found' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(401).json({ msg: 'User not found' });
+        }
+
+        const isOwner = booking.userId.toString() === req.user.id;
+        const isAdmin = ['HeadAdmin', 'BranchAdmin', 'Operator'].includes(user.role);
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ msg: 'Not authorized to update this booking' });
+        }
+
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true }
+        );
+
+        res.json(updatedBooking);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

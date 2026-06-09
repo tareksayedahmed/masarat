@@ -1,5 +1,6 @@
 {
-  "name": "Copy of Masarat Car Rental",
-  "description": "A comprehensive car rental and fleet management platform for Masarat, featuring a customer-facing booking interface and a multi-level administrative dashboard for managing branches, vehicles, and reservations.",
-  "requestFramePermissions": []
+  "name": "مسارات لتأجير السيارات",
+  "description": "تطبيق متكامل لحجز وإدارة أسطول تأجير السيارات فروع ومطارات في المملكة العربية السعودية مع مساعد ذكي تفاعلي بالذكاء الاصطناعي",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

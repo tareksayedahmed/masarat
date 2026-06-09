@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Tajawal", ui-sans-serif, system-ui, sans-serif;
+  --color-gray-450: #888888;
+  --color-gray-650: #4b5563;
+  --color-gray-750: #262626;
+  --color-gray-805: #1c1c1e;
+  --color-gray-850: #151515;
+  --color-gray-950: #0a0a0a;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+body {
+  font-family: 'Tajawal', sans-serif;
+}
